@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Disparador
-==========
+TaskTriggerAntitrack
+====================
 Programador de tareas de escritorio. Fusiona dos ideas:
 
   - "Alarma": dispara a una hora ALEATORIA dentro de un rango, ejecuta un
@@ -23,6 +23,7 @@ para teclear en ventanas; aplay/paplay para sonido).
 import os
 import sys
 import json
+import math
 import time
 import random
 import shutil
@@ -280,6 +281,152 @@ class Tooltip:
             self.tip = None
 
 
+class TimeField:
+    """Botón HH:MM que abre un selector tipo reloj."""
+    def __init__(self, parent, h=0, m=0):
+        self.h, self.m = int(h), int(m)
+        self.btn = ttk.Button(parent, text=self._lbl(), width=10,
+                              style="Time.TButton", command=self._open)
+
+    def _lbl(self):
+        return " %02d:%02d  ▾" % (self.h, self.m)
+
+    def set_hm(self, h, m):
+        self.h, self.m = int(h), int(m)
+        self.btn.config(text=self._lbl())
+
+    def get_hm(self):
+        return self.h, self.m
+
+    def _open(self):
+        _TimePopup(self.btn, self.h, self.m, self.set_hm)
+
+
+class _TimePopup:
+    """Reloj analógico para elegir hora (anillo exterior 0–11, interior 12–23) y minutos."""
+    R_OUT, R_IN, R_MIN = 98, 64, 98
+
+    def __init__(self, anchor, h, m, cb):
+        self.cb = cb
+        self.h, self.m = h, m
+        self.mode = "hour"
+        self.cx, self.cy = 140, 150
+        top = self.top = tk.Toplevel(anchor)
+        top.wm_overrideredirect(True)
+        top.configure(bg="#2a2a3a")
+        top.wm_geometry("+%d+%d" % (anchor.winfo_rootx(),
+                                    anchor.winfo_rooty() + anchor.winfo_height() + 4))
+        top.attributes("-topmost", True)
+        wrap = tk.Frame(top, bg="#1c1c26")
+        wrap.pack(padx=2, pady=2)
+
+        head = tk.Frame(wrap, bg="#1c1c26")
+        head.pack(fill="x", pady=(8, 0))
+        self.lh = tk.Label(head, text="%02d" % self.h, font=("Segoe UI", 22, "bold"),
+                           bg="#1c1c26", fg="#7aa2ff", cursor="hand2")
+        self.lh.pack(side="left", padx=(20, 2))
+        tk.Label(head, text=":", font=("Segoe UI", 22, "bold"), bg="#1c1c26", fg="#e6e6f0").pack(side="left")
+        self.lm = tk.Label(head, text="%02d" % self.m, font=("Segoe UI", 22, "bold"),
+                           bg="#1c1c26", fg="#8a8aa0", cursor="hand2")
+        self.lm.pack(side="left", padx=(2, 20))
+        self.lh.bind("<Button-1>", lambda e: self._set_mode("hour"))
+        self.lm.bind("<Button-1>", lambda e: self._set_mode("minute"))
+
+        self.cv = tk.Canvas(wrap, width=280, height=290, bg="#1c1c26", highlightthickness=0)
+        self.cv.pack()
+        self.cv.bind("<Button-1>", self._click)
+        self.cv.bind("<B1-Motion>", self._click)
+        self.cv.bind("<ButtonRelease-1>", self._release)
+
+        bar = tk.Frame(wrap, bg="#1c1c26")
+        bar.pack(fill="x", pady=(0, 10), padx=14)
+        tk.Button(bar, text="Cancelar", command=self._close, bd=0, bg="#2a2a38", fg="#e6e6f0",
+                  activebackground="#333345", padx=10, pady=4, cursor="hand2").pack(side="right")
+        tk.Button(bar, text="OK", command=self._ok, bd=0, bg="#7aa2ff", fg="#0b0b12",
+                  activebackground="#9cb8ff", padx=18, pady=4, font=("Segoe UI", 10, "bold"),
+                  cursor="hand2").pack(side="right", padx=6)
+
+        top.bind("<Escape>", lambda e: self._close())
+        top.bind("<Return>", lambda e: self._ok())
+        top.grab_set()
+        top.focus_set()
+        self._draw()
+
+    def _set_mode(self, mode):
+        self.mode = mode
+        self._draw()
+
+    def _dot(self, x, y, r, color):
+        self.cv.create_oval(x - r, y - r, x + r, y + r, fill=color, outline="")
+
+    def _draw(self):
+        c = self.cv
+        c.delete("all")
+        cx, cy = self.cx, self.cy
+        c.create_oval(cx - 112, cy - 112, cx + 112, cy + 112, fill="#13131a", outline="#2a2a3a", width=2)
+        self.lh.config(fg="#7aa2ff" if self.mode == "hour" else "#8a8aa0")
+        self.lm.config(fg="#7aa2ff" if self.mode == "minute" else "#8a8aa0")
+        if self.mode == "hour":
+            for v in range(24):
+                outer = v < 12
+                R = self.R_OUT if outer else self.R_IN
+                th = math.radians((v % 12) * 30)
+                x, y = cx + R * math.sin(th), cy - R * math.cos(th)
+                sel = (v == self.h)
+                if sel:
+                    c.create_line(cx, cy, x, y, fill="#7aa2ff", width=3)
+                    self._dot(x, y, 16, "#7aa2ff")
+                fg = "#0b0b12" if sel else ("#e6e6f0" if outer else "#9a9ab0")
+                c.create_text(x, y, text="%02d" % v, fill=fg,
+                              font=("Segoe UI", 10 if outer else 9, "bold" if sel else "normal"))
+        else:
+            R = self.R_MIN
+            th = math.radians(self.m * 6)
+            x, y = cx + R * math.sin(th), cy - R * math.cos(th)
+            c.create_line(cx, cy, x, y, fill="#7aa2ff", width=3)
+            self._dot(x, y, 16, "#7aa2ff")
+            for v in range(0, 60, 5):
+                th = math.radians(v * 6)
+                x, y = cx + R * math.sin(th), cy - R * math.cos(th)
+                sel = (v == self.m)
+                c.create_text(x, y, text="%02d" % v, fill="#0b0b12" if sel else "#e6e6f0",
+                              font=("Segoe UI", 10, "bold" if sel else "normal"))
+        self._dot(cx, cy, 4, "#7aa2ff")
+
+    def _click(self, e):
+        dx, dy = e.x - self.cx, e.y - self.cy
+        dist = math.hypot(dx, dy)
+        th = math.atan2(dx, -dy)
+        if th < 0:
+            th += 2 * math.pi
+        if self.mode == "hour":
+            hour = int(round(th / math.radians(30))) % 12
+            if dist < (self.R_OUT + self.R_IN) / 2:
+                hour += 12
+            self.h = hour % 24
+            self.lh.config(text="%02d" % self.h)
+        else:
+            self.m = int(round(th / math.radians(6))) % 60
+            self.lm.config(text="%02d" % self.m)
+        self._draw()
+
+    def _release(self, _):
+        # tras elegir la hora, pasar a minutos automáticamente
+        if self.mode == "hour":
+            self._set_mode("minute")
+
+    def _ok(self):
+        self.cb(self.h, self.m)
+        self._close()
+
+    def _close(self):
+        try:
+            self.top.grab_release()
+        except Exception:
+            pass
+        self.top.destroy()
+
+
 class App:
     def __init__(self, root):
         self.root = root
@@ -328,6 +475,9 @@ class App:
         st.map("Ghost.TButton", background=[("active", "#2a2a38")])
         st.configure("Danger.TButton", background="#3a2230", foreground=DANGER, borderwidth=0, padding=6)
         st.map("Danger.TButton", background=[("active", "#4a2a3c")])
+        st.configure("Time.TButton", background="#262633", foreground=FG,
+                     font=("Consolas", 13), borderwidth=0, padding=(8, 7))
+        st.map("Time.TButton", background=[("active", "#33334a")])
         # indicador de foco visible (accesibilidad por teclado)
         st.map("TEntry", bordercolor=[("focus", ACC)], lightcolor=[("focus", ACC)])
         st.map("TSpinbox", bordercolor=[("focus", ACC)], lightcolor=[("focus", ACC)])
@@ -335,7 +485,7 @@ class App:
 
     # ---- construccion de la ventana ------------------------------
     def _build_ui(self):
-        ttk.Label(self.root, text="Disparador", style="H.TLabel").pack(anchor="w", padx=18, pady=(14, 0))
+        ttk.Label(self.root, text="TaskTriggerAntitrack", style="H.TLabel").pack(anchor="w", padx=18, pady=(14, 0))
         ttk.Label(self.root, text="Programador de tareas · terminales y alarmas",
                   background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18)
 
@@ -357,8 +507,9 @@ class App:
         # hora fija
         self.fixed_row = ttk.Frame(card, style="Card.TFrame")
         self.fixed_row.grid(row=2, column=0, columnspan=3, sticky="w", pady=2)
-        ttk.Label(self.fixed_row, text="Hora (HH:MM)", style="Card.TLabel", width=14).pack(side="left")
-        self.t_h, self.t_m = self._hm_spin(self.fixed_row, 5, 0)
+        ttk.Label(self.fixed_row, text="Hora", style="Card.TLabel", width=14).pack(side="left")
+        self.t = TimeField(self.fixed_row, 5, 0)
+        self.t.btn.pack(side="left")
 
         # rango
         self.rand_row = ttk.Frame(card, style="Card.TFrame")
@@ -366,9 +517,11 @@ class App:
         _rsub = ttk.Frame(self.rand_row, style="Card.TFrame")
         _rsub.pack(anchor="w")
         ttk.Label(_rsub, text="Desde", style="Card.TLabel", width=14).pack(side="left")
-        self.s_h, self.s_m = self._hm_spin(_rsub, 0, 0)
-        ttk.Label(_rsub, text="  hasta", style="Card.TLabel").pack(side="left")
-        self.e_h, self.e_m = self._hm_spin(_rsub, 8, 0)
+        self.s = TimeField(_rsub, 0, 0)
+        self.s.btn.pack(side="left")
+        ttk.Label(_rsub, text="  hasta  ", style="Card.TLabel").pack(side="left")
+        self.e = TimeField(_rsub, 8, 0)
+        self.e.btn.pack(side="left")
         ttk.Label(self.rand_row,
                   text="(i) La hora exacta es impredecible dentro del rango → antitrazabilidad.",
                   style="Mut.TLabel").pack(anchor="w", pady=(3, 0))
@@ -473,16 +626,6 @@ class App:
                 row=r, column=2, padx=(6, 0))
         return e
 
-    def _hm_spin(self, parent, h, m):
-        sh = ttk.Spinbox(parent, from_=0, to=23, width=4, format="%02.0f", wrap=True)
-        sh.set("%02d" % h)
-        sh.pack(side="left", padx=2)
-        ttk.Label(parent, text=":", style="Card.TLabel").pack(side="left")
-        sm = ttk.Spinbox(parent, from_=0, to=59, width=4, format="%02.0f", wrap=True)
-        sm.set("%02d" % m)
-        sm.pack(side="left", padx=2)
-        return sh, sm
-
     def _pick(self, entry):
         p = filedialog.askopenfilename()
         if p:
@@ -508,9 +651,9 @@ class App:
         a = {
             "name": self.name.get().strip() or "tarea",
             "time_mode": self.time_mode.get(),
-            "time": "%02d:%02d" % (int(self.t_h.get()), int(self.t_m.get())),
-            "start_time": "%02d:%02d" % (int(self.s_h.get()), int(self.s_m.get())),
-            "end_time": "%02d:%02d" % (int(self.e_h.get()), int(self.e_m.get())),
+            "time": "%02d:%02d" % self.t.get_hm(),
+            "start_time": "%02d:%02d" % self.s.get_hm(),
+            "end_time": "%02d:%02d" % self.e.get_hm(),
             "daily": self.daily.get(),
             "action": self.action.get(),
             "filter": self.filt.get().strip(),
@@ -535,12 +678,9 @@ class App:
         self.clear()
         self.name.insert(0, a.get("name", ""))
         self.time_mode.set(a.get("time_mode", "fixed"))
-        th, tm = _hm(a.get("time", "05:00"))
-        self.t_h.set("%02d" % th); self.t_m.set("%02d" % tm)
-        sh, sm = _hm(a.get("start_time", "00:00"))
-        self.s_h.set("%02d" % sh); self.s_m.set("%02d" % sm)
-        eh, em = _hm(a.get("end_time", "08:00"))
-        self.e_h.set("%02d" % eh); self.e_m.set("%02d" % em)
+        self.t.set_hm(*_hm(a.get("time", "05:00")))
+        self.s.set_hm(*_hm(a.get("start_time", "00:00")))
+        self.e.set_hm(*_hm(a.get("end_time", "08:00")))
         self.daily.set(a.get("daily", True))
         self.action.set(a.get("action", "terminal"))
         self.filt.insert(0, a.get("filter", ""))
@@ -657,7 +797,7 @@ class App:
                 self.root.after(0, lambda: self._flash(
                     ("PRUEBA: " if test else "") + "programa lanzado"))
             if a.get("popup") and a.get("message"):
-                self.root.after(0, lambda: messagebox.showinfo(a.get("name", "Disparador"), a["message"]))
+                self.root.after(0, lambda: messagebox.showinfo(a.get("name", "TaskTriggerAntitrack"), a["message"]))
 
         threading.Thread(target=work, daemon=True).start()
 

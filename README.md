@@ -64,6 +64,8 @@ python tasktriggerantitrack.py
 En Windows también puedes hacer doble clic en `tasktriggerantitrack.cmd` (abre la ventana sin consola).
 
 1. Rellena **nombre**, elige **hora fija** o **rango**, y el **tipo de acción**.
+   Las horas se eligen en un **selector tipo reloj**: pincha la hora en el anillo
+   (exterior `0–11`, interior `12–23`) y luego los minutos.
 2. **Guardar tarea** (aparece en la lista). **Probar ahora** para verla disparar en el acto.
 3. Deja la ventana abierta: cada segundo comprueba y dispara lo que toque.
 
