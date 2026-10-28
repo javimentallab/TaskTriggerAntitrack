@@ -1,4 +1,4 @@
-# Disparador
+# TaskTriggerAntitrack
 
 Programador de tareas de escritorio (Python + tkinter, **sin dependencias pip**) que
 a una hora dispara una acción. Fusiona dos herramientas:
@@ -58,10 +58,10 @@ apertura de un servicio a una hora impredecible dentro de una ventana amplia.
 ## Uso
 
 ```bash
-python disparador.py
+python tasktriggerantitrack.py
 ```
 
-En Windows también puedes hacer doble clic en `disparador.cmd` (abre la ventana sin consola).
+En Windows también puedes hacer doble clic en `tasktriggerantitrack.cmd` (abre la ventana sin consola).
 
 1. Rellena **nombre**, elige **hora fija** o **rango**, y el **tipo de acción**.
 2. **Guardar tarea** (aparece en la lista). **Probar ahora** para verla disparar en el acto.

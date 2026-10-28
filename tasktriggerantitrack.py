@@ -245,20 +245,48 @@ def compute_next(alarm, now=None):
 BG = "#13131a"
 CARD = "#1c1c26"
 FG = "#e6e6f0"
-MUT = "#8a8aa0"
+MUT = "#a6a6c0"
 ACC = "#7aa2ff"
 OK = "#8ee6a8"
 WARN = "#f2c96b"
 DANGER = "#f28ba8"
 
 
+class Tooltip:
+    """Ayuda contextual al pasar el ratón o al enfocar con el teclado."""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<FocusIn>", self._show, add="+")
+        widget.bind("<FocusOut>", self._hide, add="+")
+
+    def _show(self, _=None):
+        if self.tip or not self.text:
+            return
+        x = self.widget.winfo_rootx() + 12
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 4
+        self.tip = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        tk.Label(tw, text=self.text, bg="#2a2a3a", fg="#e6e6f0", bd=1, relief="solid",
+                 font=("Segoe UI", 9), padx=7, pady=4, wraplength=340, justify="left").pack()
+
+    def _hide(self, _=None):
+        if self.tip:
+            self.tip.destroy()
+            self.tip = None
+
+
 class App:
     def __init__(self, root):
         self.root = root
-        root.title("Disparador")
+        root.title("TaskTriggerAntitrack")
         root.configure(bg=BG)
-        root.geometry("560x680")
-        root.minsize(520, 620)
+        root.geometry("600x740")
+        root.minsize(560, 680)
         if sys.platform == "win32" and os.path.exists(ICO_FILE):
             try:
                 root.iconbitmap(ICO_FILE)
@@ -280,7 +308,7 @@ class App:
         except Exception:
             pass
         st.configure(".", background=BG, foreground=FG,
-                     fieldbackground=CARD, bordercolor=CARD, font=("Segoe UI", 10))
+                     fieldbackground=CARD, bordercolor=CARD, font=("Segoe UI", 11))
         st.configure("TFrame", background=BG)
         st.configure("Card.TFrame", background=CARD)
         st.configure("TLabel", background=BG, foreground=FG)
@@ -300,6 +328,10 @@ class App:
         st.map("Ghost.TButton", background=[("active", "#2a2a38")])
         st.configure("Danger.TButton", background="#3a2230", foreground=DANGER, borderwidth=0, padding=6)
         st.map("Danger.TButton", background=[("active", "#4a2a3c")])
+        # indicador de foco visible (accesibilidad por teclado)
+        st.map("TEntry", bordercolor=[("focus", ACC)], lightcolor=[("focus", ACC)])
+        st.map("TSpinbox", bordercolor=[("focus", ACC)], lightcolor=[("focus", ACC)])
+        st.map("TButton", relief=[("focus", "solid")])
 
     # ---- construccion de la ventana ------------------------------
     def _build_ui(self):
@@ -331,10 +363,15 @@ class App:
         # rango
         self.rand_row = ttk.Frame(card, style="Card.TFrame")
         self.rand_row.grid(row=3, column=0, columnspan=3, sticky="w", pady=2)
-        ttk.Label(self.rand_row, text="Desde", style="Card.TLabel", width=14).pack(side="left")
-        self.s_h, self.s_m = self._hm_spin(self.rand_row, 0, 0)
-        ttk.Label(self.rand_row, text="  hasta", style="Card.TLabel").pack(side="left")
-        self.e_h, self.e_m = self._hm_spin(self.rand_row, 8, 0)
+        _rsub = ttk.Frame(self.rand_row, style="Card.TFrame")
+        _rsub.pack(anchor="w")
+        ttk.Label(_rsub, text="Desde", style="Card.TLabel", width=14).pack(side="left")
+        self.s_h, self.s_m = self._hm_spin(_rsub, 0, 0)
+        ttk.Label(_rsub, text="  hasta", style="Card.TLabel").pack(side="left")
+        self.e_h, self.e_m = self._hm_spin(_rsub, 8, 0)
+        ttk.Label(self.rand_row,
+                  text="(i) La hora exacta es impredecible dentro del rango → antitrazabilidad.",
+                  style="Mut.TLabel").pack(anchor="w", pady=(3, 0))
 
         self.daily = tk.BooleanVar(value=True)
         ttk.Checkbutton(card, text="Repetir cada día", variable=self.daily).grid(
@@ -385,6 +422,12 @@ class App:
 
         card.grid_columnconfigure(1, weight=1)
 
+        # ayuda contextual
+        Tooltip(self.filt, "Parte del título de las ventanas objetivo. Ej.: 'claude'.")
+        Tooltip(self.text, "Lo que se teclea en cada ventana, seguido de Enter.")
+        Tooltip(self.program, "Programa a ejecutar. El Archivo/URL se le pasa como argumento.")
+        Tooltip(self.file_url, "Archivo o URL. Sin programa, se abre con la app por defecto.")
+
         # lista
         lf = ttk.Frame(self.root, style="TFrame")
         lf.pack(fill="both", expand=True, padx=14, pady=(0, 10))
@@ -392,7 +435,8 @@ class App:
         inner = tk.Frame(lf, bg=CARD)
         inner.pack(fill="both", expand=True, pady=(4, 0))
         self.lb = tk.Listbox(inner, bg=CARD, fg=FG, selectbackground=ACC, selectforeground="#0b0b12",
-                             borderwidth=0, highlightthickness=0, activestyle="none", font=("Consolas", 9))
+                             borderwidth=0, highlightthickness=1, highlightcolor=ACC,
+                             activestyle="none", font=("Consolas", 10))
         self.lb.pack(side="left", fill="both", expand=True)
         sb = ttk.Scrollbar(inner, command=self.lb.yview)
         sb.pack(side="right", fill="y")
@@ -405,6 +449,15 @@ class App:
         ttk.Button(row, text="Eliminar", style="Danger.TButton", command=self.delete).pack(side="left", padx=8)
         self.status = ttk.Label(row, text="", background=BG, foreground=MUT)
         self.status.pack(side="right")
+
+        # atajos de teclado (accesibilidad)
+        self.root.bind_all("<Control-s>", lambda e: self.save_task())
+        self.root.bind_all("<Control-Return>", lambda e: self.save_task())
+        self.root.bind_all("<Control-t>", lambda e: self.test_now())
+        self.root.bind_all("<Escape>", lambda e: self.clear())
+        self.lb.bind("<Delete>", lambda e: self.delete())
+        ttk.Label(self.root, text="Atajos:  Ctrl+S guardar · Ctrl+T probar · Esc limpiar · Supr eliminar",
+                  background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(0, 8))
 
         self._sync_mode()
 
