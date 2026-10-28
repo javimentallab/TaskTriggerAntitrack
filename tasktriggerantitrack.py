@@ -26,6 +26,7 @@ import json
 import math
 import time
 import queue
+import shlex
 import random
 import shutil
 import threading
@@ -135,19 +136,62 @@ if sys.platform == "win32":
         if tfg != ttg:
             user32.AttachThreadInput(tfg, ttg, False)
 
-    def send_to_terminals(filt, text):
-        wins = list_windows(filt)
+    _VK = {"esc": 0x1B, "escape": 0x1B, "enter": 0x0D, "return": 0x0D, "tab": 0x09,
+           "space": 0x20, "backspace": 0x08, "bksp": 0x08, "home": 0x24, "end": 0x23,
+           "up": 0x26, "down": 0x28, "left": 0x25, "right": 0x27, "delete": 0x2E, "del": 0x2E}
+    _MODS = {"ctrl": 0x11, "control": 0x11, "alt": 0x12, "shift": 0x10}
+
+    def _vk_for(tok):
+        tok = tok.lower()
+        if tok in _VK:
+            return _VK[tok]
+        if len(tok) == 1:
+            return ord(tok.upper())
+        return None
+
+    def _tap(vk):
+        _send(_kb(vk, 0, 0))
+        _send(_kb(vk, 0, KEYEVENTF_KEYUP))
+
+    def _send_chord(token):
+        parts = token.split("+")
+        mods = [_MODS[p.lower()] for p in parts[:-1] if p.lower() in _MODS]
+        key = _vk_for(parts[-1])
+        if key is None:
+            return
+        for mv in mods:
+            _send(_kb(mv, 0, 0))
+        _tap(key)
+        for mv in reversed(mods):
+            _send(_kb(mv, 0, KEYEVENTF_KEYUP))
+
+    def _type_text(text):
+        for ch in text:
+            if ord(ch) > 0xFFFF:  # fuera del BMP, raro en comandos
+                continue
+            _send(_kb(0, ord(ch), KEYEVENTF_UNICODE))
+            _send(_kb(0, ord(ch), KEYEVENTF_UNICODE | KEYEVENTF_KEYUP))
+
+    def send_to_terminals(filt, text, prekeys="", enters=1, targets="all"):
+        if targets == "focused":
+            h = user32.GetForegroundWindow()
+            wins = [(h, "")] if h else []
+        else:
+            wins = list_windows(filt)
+            if targets == "first":
+                wins = wins[:1]
         for h, _ in wins:
-            _focus(h)
-            time.sleep(0.35)
-            for ch in text:
-                if ord(ch) > 0xFFFF:  # fuera del BMP, raro en comandos
-                    continue
-                _send(_kb(0, ord(ch), KEYEVENTF_UNICODE))
-                _send(_kb(0, ord(ch), KEYEVENTF_UNICODE | KEYEVENTF_KEYUP))
+            if targets != "focused":
+                _focus(h)
+                time.sleep(0.35)
+            for tok in (prekeys or "").split():
+                _send_chord(tok)
+                time.sleep(0.05)
+            _type_text(text)
             time.sleep(0.12)
-            _send(_kb(VK_RETURN, 0, 0))
-            _send(_kb(VK_RETURN, 0, KEYEVENTF_KEYUP))
+            for _ in range(max(0, int(enters))):
+                _tap(VK_RETURN)
+                time.sleep(0.05)
             time.sleep(0.25)
         return len(wins)
 
@@ -172,13 +216,35 @@ else:  # Linux / otros: xdotool
             res.append((wid, name))
         return res
 
-    def send_to_terminals(filt, text):
-        wins = list_windows(filt)
+    _XKEY = {"esc": "Escape", "escape": "Escape", "enter": "Return", "return": "Return",
+             "tab": "Tab", "space": "space", "backspace": "BackSpace", "bksp": "BackSpace",
+             "home": "Home", "end": "End", "up": "Up", "down": "Down", "left": "Left",
+             "right": "Right", "delete": "Delete", "del": "Delete"}
+
+    def send_to_terminals(filt, text, prekeys="", enters=1, targets="all"):
+        if not shutil.which("xdotool"):
+            return 0
+        if targets == "focused":
+            try:
+                wid = subprocess.check_output(["xdotool", "getactivewindow"]).decode().strip()
+                wins = [(wid, "")]
+            except Exception:
+                wins = []
+        else:
+            wins = list_windows(filt)
+            if targets == "first":
+                wins = wins[:1]
         for wid, _ in wins:
-            subprocess.call(["xdotool", "windowactivate", "--sync", wid])
-            time.sleep(0.3)
+            if targets != "focused":
+                subprocess.call(["xdotool", "windowactivate", "--sync", wid])
+                time.sleep(0.3)
+            for tok in (prekeys or "").split():
+                key = "+".join(_XKEY.get(p.lower(), p) for p in tok.split("+"))
+                subprocess.call(["xdotool", "key", "--", key])
+                time.sleep(0.05)
             subprocess.call(["xdotool", "type", "--", text])
-            subprocess.call(["xdotool", "key", "Return"])
+            for _ in range(max(0, int(enters))):
+                subprocess.call(["xdotool", "key", "Return"])
             time.sleep(0.2)
         return len(wins)
 
@@ -201,18 +267,39 @@ def play_sound(path):
         print("sonido:", e)
 
 
-def run_program(program, file_url):
+def run_program(program, file_url, args="", workdir="", winmode="normal"):
+    cwd = workdir or None
+    extra = []
+    if args:
+        try:
+            extra = shlex.split(args, posix=(sys.platform != "win32"))
+        except Exception:
+            extra = args.split()
+    tail = extra + ([file_url] if file_url else [])
     try:
         if program:
-            args = [program] + ([file_url] if file_url else [])
-            subprocess.Popen(args)
+            if sys.platform == "win32":
+                if winmode == "elevated":   # pedir UAC con ShellExecute 'runas'
+                    params = " ".join('"%s"' % a for a in tail)
+                    ctypes.windll.shell32.ShellExecuteW(None, "runas", program, params, cwd, 1)
+                    return
+                si, creation = None, 0
+                if winmode in ("min", "hidden"):
+                    si = subprocess.STARTUPINFO()
+                    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    si.wShowWindow = 6 if winmode == "min" else 0   # SW_MINIMIZE / SW_HIDE
+                    if winmode == "hidden":
+                        creation = 0x08000000                        # CREATE_NO_WINDOW
+                subprocess.Popen([program] + tail, cwd=cwd, startupinfo=si, creationflags=creation)
+            else:
+                subprocess.Popen([program] + tail, cwd=cwd)
         elif file_url:
             if sys.platform == "win32":
                 os.startfile(file_url)  # noqa
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", file_url])
+                subprocess.Popen(["open", file_url], cwd=cwd)
             else:
-                subprocess.Popen(["xdg-open", file_url])
+                subprocess.Popen(["xdg-open", file_url], cwd=cwd)
     except Exception as e:
         print("programa:", e)
 
@@ -441,8 +528,8 @@ class App:
         self.root = root
         root.title("TaskTriggerAntitrack")
         root.configure(bg=BG)
-        root.geometry("%dx%d" % (px(600), px(740)))
-        root.minsize(px(560), px(680))
+        root.geometry("%dx%d" % (px(620), px(830)))
+        root.minsize(px(580), px(760))
         if sys.platform == "win32" and os.path.exists(ICO_FILE):
             try:
                 root.iconbitmap(ICO_FILE)
@@ -553,8 +640,19 @@ class App:
         self.term_box.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(6, 0))
         self.filt = self._row_entry(self.term_box, "Filtro de título", 0, "claude")
         self.text = self._row_entry(self.term_box, "Texto a enviar", 1, "continua")
+        self.prekeys = self._row_entry(self.term_box, "Teclas previas", 2, "")
+        tr = ttk.Frame(self.term_box, style="Card.TFrame")
+        tr.grid(row=3, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Label(tr, text="Ventanas:", style="Card.TLabel").pack(side="left", padx=(0, 6))
+        self.targets = tk.StringVar(value="all")
+        for txt, val in (("Todas", "all"), ("Primera", "first"), ("Foco", "focused")):
+            self._seg_radio(tr, txt, val, self.targets).pack(side="left", padx=(0, 6))
+        ttk.Label(tr, text="   Pulsar Enter:", style="Card.TLabel").pack(side="left")
+        self.enters = ttk.Combobox(tr, width=3, state="readonly", values=[0, 1, 2, 3, 4, 5])
+        self.enters.set(1)
+        self.enters.pack(side="left", padx=(4, 0))
         ttk.Label(self.term_box, text="Casa ventanas cuyo título contenga el filtro; teclea el texto + Enter.",
-                  style="Mut.TLabel").grid(row=2, column=0, columnspan=3, sticky="w", pady=(2, 0))
+                  style="Mut.TLabel").grid(row=4, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
         # accion programa
         self.prog_box = ttk.Frame(card, style="Card.TFrame")
@@ -563,6 +661,16 @@ class App:
                                        browse=lambda: self._pick(self.program))
         self.file_url = self._row_entry(self.prog_box, "Archivo / URL", 1, "",
                                         browse=lambda: self._pick(self.file_url))
+        self.args = self._row_entry(self.prog_box, "Argumentos", 2, "")
+        self.workdir = self._row_entry(self.prog_box, "Carpeta de trabajo", 3, "",
+                                       browse=lambda: self._pickdir(self.workdir))
+        wr = ttk.Frame(self.prog_box, style="Card.TFrame")
+        wr.grid(row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Label(wr, text="Modo ventana:", style="Card.TLabel").pack(side="left", padx=(0, 6))
+        self.winmode = ttk.Combobox(wr, width=12, state="readonly",
+                                    values=["normal", "minimizado", "oculto", "elevado"])
+        self.winmode.set("normal")
+        self.winmode.pack(side="left")
 
         # extras
         ex = ttk.Frame(card, style="Card.TFrame")
@@ -585,8 +693,11 @@ class App:
         # ayuda contextual
         Tooltip(self.filt, "Parte del título de las ventanas objetivo. Ej.: 'claude'.")
         Tooltip(self.text, "Lo que se teclea en cada ventana, seguido de Enter.")
-        Tooltip(self.program, "Programa a ejecutar. El Archivo/URL se le pasa como argumento.")
+        Tooltip(self.prekeys, "Teclas antes del texto. Ej.: esc  o  ctrl+c  (separa varias con espacio).")
+        Tooltip(self.program, "Programa a ejecutar. Args/Archivo/URL se le pasan como argumentos.")
         Tooltip(self.file_url, "Archivo o URL. Sin programa, se abre con la app por defecto.")
+        Tooltip(self.args, "Argumentos extra, estilo línea de comandos (se respetan las comillas).")
+        Tooltip(self.workdir, "Carpeta desde la que se lanza el programa.")
 
         # lista
         lf = ttk.Frame(self.root, style="TFrame")
@@ -644,6 +755,15 @@ class App:
             entry.delete(0, tk.END)
             entry.insert(0, p)
 
+    def _pickdir(self, entry):
+        p = filedialog.askdirectory()
+        if p:
+            entry.delete(0, tk.END)
+            entry.insert(0, p)
+
+    _WINMODE_TO_UI = {"normal": "normal", "min": "minimizado", "hidden": "oculto", "elevated": "elevado"}
+    _WINMODE_FROM_UI = {"normal": "normal", "minimizado": "min", "oculto": "hidden", "elevado": "elevated"}
+
     # botones segmentados grandes (radios y checks tipo botón)
     _SEG = dict(indicatoron=False, bd=0, padx=16, pady=8, font=("Segoe UI", 11),
                 bg="#262633", fg=FG, selectcolor="#36508f",
@@ -683,8 +803,14 @@ class App:
             "action": self.action.get(),
             "filter": self.filt.get().strip(),
             "text": self.text.get(),
+            "prekeys": self.prekeys.get().strip(),
+            "enters": int(self.enters.get() or 1),
+            "targets": self.targets.get(),
             "program": self.program.get().strip(),
             "file_url": self.file_url.get().strip(),
+            "args": self.args.get().strip(),
+            "workdir": self.workdir.get().strip(),
+            "winmode": self._WINMODE_FROM_UI.get(self.winmode.get(), "normal"),
             "sound": self.snd.get(),
             "popup": self.pop.get(),
             "message": self.msg.get(),
@@ -710,8 +836,14 @@ class App:
         self.action.set(a.get("action", "terminal"))
         self.filt.insert(0, a.get("filter", ""))
         self.text.insert(0, a.get("text", ""))
+        self.prekeys.insert(0, a.get("prekeys", ""))
+        self.enters.set(a.get("enters", 1))
+        self.targets.set(a.get("targets", "all"))
         self.program.insert(0, a.get("program", ""))
         self.file_url.insert(0, a.get("file_url", ""))
+        self.args.insert(0, a.get("args", ""))
+        self.workdir.insert(0, a.get("workdir", ""))
+        self.winmode.set(self._WINMODE_TO_UI.get(a.get("winmode", "normal"), "normal"))
         self.snd.set(a.get("sound", False))
         self.pop.set(a.get("popup", False))
         self.msg.insert(0, a.get("message", ""))
@@ -732,8 +864,12 @@ class App:
         self._flash("Tarea guardada.")
 
     def clear(self):
-        for e in (self.name, self.filt, self.text, self.program, self.file_url, self.msg):
+        for e in (self.name, self.filt, self.text, self.prekeys,
+                  self.program, self.file_url, self.args, self.workdir, self.msg):
             e.delete(0, tk.END)
+        self.enters.set(1)
+        self.targets.set("all")
+        self.winmode.set("normal")
         self.selected = None
         self._update_toggle_btn()
 
@@ -854,11 +990,14 @@ class App:
             if a.get("sound"):
                 play_sound(SOUND_FILE)
             if a["action"] == "terminal":
-                n = send_to_terminals(a.get("filter", ""), a.get("text", ""))
+                n = send_to_terminals(a.get("filter", ""), a.get("text", ""),
+                                      a.get("prekeys", ""), a.get("enters", 1),
+                                      a.get("targets", "all"))
                 self.ui_queue.put(lambda: self._flash(
                     ("PRUEBA: " if test else "") + "enviado a %d ventana(s)" % n))
             else:
-                run_program(a.get("program", ""), a.get("file_url", ""))
+                run_program(a.get("program", ""), a.get("file_url", ""),
+                            a.get("args", ""), a.get("workdir", ""), a.get("winmode", "normal"))
                 self.ui_queue.put(lambda: self._flash(
                     ("PRUEBA: " if test else "") + "programa lanzado"))
             if a.get("popup") and a.get("message"):

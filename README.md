@@ -24,9 +24,13 @@ Cada tarea de la lista combina **cuándo** se dispara con **qué** hace:
 ### Qué
 - **Escribir en terminales**: busca las ventanas cuyo título contenga el *filtro*
   (por defecto `claude`), las enfoca una a una y teclea el *texto* (por defecto
-  `continua`) seguido de **Enter**.
-- **Ejecutar programa / abrir**: lanza un programa (con un archivo/URL como argumento)
-  o abre directamente el archivo/URL en su aplicación por defecto.
+  `continua`) seguido de **Enter**. Opcional: *teclas previas* (p. ej. `esc` o
+  `ctrl+c` antes del texto), *nº de Enter* a pulsar (`0` = enviar sin Enter), y a
+  *qué ventanas* actuar (todas / solo la primera / solo la que tiene el foco).
+- **Ejecutar programa / abrir**: lanza un programa o abre un archivo/URL en su
+  aplicación por defecto. Opcional: *argumentos* (estilo línea de comandos),
+  *carpeta de trabajo* y *modo de ventana* (normal / minimizado / oculto / elevado
+  con UAC).
 
 ### Extras
 - **Sonido** al disparar.
