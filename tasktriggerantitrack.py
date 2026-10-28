@@ -943,7 +943,13 @@ class App:
         for a in self.alarms:
             when = (a.get("time", "--:--") if a.get("time_mode", "fixed") == "fixed"
                     else "%s–%s rnd" % (a.get("start_time", "??"), a.get("end_time", "??")))
-            nf = a.get("next_fire", "")[-8:]
+            nf_dt = _parse_iso(a.get("next_fire"))
+            if nf_dt is None:
+                nf = "--"
+            elif nf_dt.date() == datetime.now().date():
+                nf = nf_dt.strftime("%H:%M:%S")          # hoy
+            else:
+                nf = nf_dt.strftime("%d/%m %H:%M")        # otro día (p. ej. mañana)
             tag = "✎" if a.get("action") == "terminal" else "▷"
             state = "●" if a.get("enabled", True) else "⏸"
             daily = "↻" if a.get("daily") else " "
@@ -1066,4 +1072,6 @@ if __name__ == "__main__":
     except Exception:
         pass
     App(root)
+    if "--min" in sys.argv:        # autoarranque: empezar minimizada
+        root.iconify()
     root.mainloop()
