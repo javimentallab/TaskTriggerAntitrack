@@ -1,0 +1,5 @@
+alarms.json
+__pycache__/
+*.pyc
+err.txt
+out.txt
