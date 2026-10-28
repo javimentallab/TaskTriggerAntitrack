@@ -482,7 +482,7 @@ class App:
         st.configure("Accent.TButton", background=ACC, foreground="#0b0b12",
                      font=("Segoe UI Semibold", 11), borderwidth=0, padding=8)
         st.map("Accent.TButton", background=[("active", "#9cb8ff")])
-        st.configure("Ghost.TButton", background=CARD, foreground=FG, borderwidth=0, padding=6)
+        st.configure("Ghost.TButton", background=CARD, foreground=FG, borderwidth=0, padding=(12, 7))
         st.map("Ghost.TButton", background=[("active", "#2a2a38")])
         st.configure("Danger.TButton", background="#3a2230", foreground=DANGER, borderwidth=0, padding=6)
         st.map("Danger.TButton", background=[("active", "#4a2a3c")])
@@ -510,10 +510,8 @@ class App:
         self.time_mode = tk.StringVar(value="fixed")
         mr = ttk.Frame(card, style="Card.TFrame")
         mr.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 2))
-        ttk.Radiobutton(mr, text="Hora fija", value="fixed", variable=self.time_mode,
-                        command=self._sync_mode).pack(side="left", padx=(0, 16))
-        ttk.Radiobutton(mr, text="Aleatoria en rango", value="random", variable=self.time_mode,
-                        command=self._sync_mode).pack(side="left")
+        self._seg_radio(mr, "Hora fija", "fixed", self.time_mode).pack(side="left", padx=(0, 8))
+        self._seg_radio(mr, "Aleatoria en rango", "random", self.time_mode).pack(side="left")
 
         # hora fija
         self.fixed_row = ttk.Frame(card, style="Card.TFrame")
@@ -538,8 +536,8 @@ class App:
                   style="Mut.TLabel").pack(anchor="w", pady=(3, 0))
 
         self.daily = tk.BooleanVar(value=True)
-        ttk.Checkbutton(card, text="Repetir cada día", variable=self.daily).grid(
-            row=4, column=0, columnspan=3, sticky="w", pady=(4, 8))
+        self._toggle_check(card, "Repetir cada día", self.daily).grid(
+            row=4, column=0, columnspan=3, sticky="w", pady=(8, 8))
 
         ttk.Separator(card, orient="horizontal").grid(row=5, column=0, columnspan=3, sticky="ew", pady=6)
 
@@ -547,10 +545,8 @@ class App:
         self.action = tk.StringVar(value="terminal")
         ar = ttk.Frame(card, style="Card.TFrame")
         ar.grid(row=6, column=0, columnspan=3, sticky="w")
-        ttk.Radiobutton(ar, text="Escribir en terminales", value="terminal", variable=self.action,
-                        command=self._sync_mode).pack(side="left", padx=(0, 16))
-        ttk.Radiobutton(ar, text="Ejecutar programa / abrir", value="program", variable=self.action,
-                        command=self._sync_mode).pack(side="left")
+        self._seg_radio(ar, "Escribir en terminales", "terminal", self.action).pack(side="left", padx=(0, 8))
+        self._seg_radio(ar, "Ejecutar programa / abrir", "program", self.action).pack(side="left")
 
         # accion terminal
         self.term_box = ttk.Frame(card, style="Card.TFrame")
@@ -573,8 +569,8 @@ class App:
         ex.grid(row=9, column=0, columnspan=3, sticky="w", pady=(10, 2))
         self.snd = tk.BooleanVar(value=False)
         self.pop = tk.BooleanVar(value=False)
-        ttk.Checkbutton(ex, text="Sonido", variable=self.snd).pack(side="left", padx=(0, 16))
-        ttk.Checkbutton(ex, text="Aviso emergente", variable=self.pop).pack(side="left")
+        self._toggle_check(ex, "Sonido", self.snd).pack(side="left", padx=(0, 8))
+        self._toggle_check(ex, "Aviso emergente", self.pop).pack(side="left")
         self.msg = self._row_entry(card, "Mensaje del aviso", 10, "")
 
         # botones de accion sobre el formulario
@@ -609,9 +605,13 @@ class App:
 
         row = ttk.Frame(self.root, style="TFrame")
         row.pack(fill="x", padx=14, pady=(0, 12))
-        ttk.Button(row, text="Activar / pausar", style="Ghost.TButton", command=self.toggle).pack(side="left")
+        self.btn_toggle = tk.Button(row, text="Activar / pausar", command=self.toggle,
+                                    bd=0, padx=16, pady=7, font=("Segoe UI", 10, "bold"),
+                                    cursor="hand2", bg="#2a2a38", fg=FG, activebackground="#33334a",
+                                    disabledforeground=MUT)
+        self.btn_toggle.pack(side="left")
         ttk.Button(row, text="Eliminar", style="Danger.TButton", command=self.delete).pack(side="left", padx=8)
-        self.status = ttk.Label(row, text="", background=BG, foreground=MUT)
+        self.status = ttk.Label(row, text="", background=BG, foreground=FG, font=("Segoe UI", 10))
         self.status.pack(side="right")
 
         # atajos de teclado (accesibilidad)
@@ -624,6 +624,7 @@ class App:
                   background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(0, 8))
 
         self._sync_mode()
+        self._update_toggle_btn()
 
     # ---- helpers de widgets --------------------------------------
     def _row_entry(self, parent, label, r, default="", browse=None):
@@ -633,8 +634,8 @@ class App:
         e.grid(row=r, column=1, sticky="ew", pady=3)
         parent.grid_columnconfigure(1, weight=1)
         if browse:
-            ttk.Button(parent, text="…", style="Ghost.TButton", width=3, command=browse).grid(
-                row=r, column=2, padx=(6, 0))
+            ttk.Button(parent, text="Examinar…", style="Ghost.TButton", command=browse).grid(
+                row=r, column=2, padx=(8, 0), sticky="ew")
         return e
 
     def _pick(self, entry):
@@ -642,6 +643,19 @@ class App:
         if p:
             entry.delete(0, tk.END)
             entry.insert(0, p)
+
+    # botones segmentados grandes (radios y checks tipo botón)
+    _SEG = dict(indicatoron=False, bd=0, padx=16, pady=8, font=("Segoe UI", 11),
+                bg="#262633", fg=FG, selectcolor="#36508f",
+                activebackground="#30303f", activeforeground=FG,
+                highlightthickness=0, cursor="hand2")
+
+    def _seg_radio(self, parent, text, value, var):
+        return tk.Radiobutton(parent, text=text, value=value, variable=var,
+                              command=self._sync_mode, **self._SEG)
+
+    def _toggle_check(self, parent, text, var):
+        return tk.Checkbutton(parent, text=text, variable=var, **self._SEG)
 
     def _sync_mode(self):
         if self.time_mode.get() == "fixed":
@@ -721,18 +735,23 @@ class App:
         for e in (self.name, self.filt, self.text, self.program, self.file_url, self.msg):
             e.delete(0, tk.END)
         self.selected = None
+        self._update_toggle_btn()
 
     def delete(self):
         if self.selected is None:
+            self._flash("Selecciona una tarea de la lista primero.")
             return
+        name = self.alarms[self.selected].get("name", "tarea")
         del self.alarms[self.selected]
         self.selected = None
         self.clear()
         self.refresh()
         self.save()
+        self._flash("Tarea '%s' eliminada." % name)
 
     def toggle(self):
         if self.selected is None:
+            self._flash("Selecciona una tarea de la lista primero.")
             return
         a = self.alarms[self.selected]
         a["enabled"] = not a.get("enabled", True)
@@ -740,13 +759,35 @@ class App:
             a["next_fire"] = compute_next(a).strftime(ISO)
         self.refresh()
         self.save()
+        # mantener la selección tras refrescar
+        self.lb.selection_clear(0, tk.END)
+        self.lb.selection_set(self.selected)
+        self.lb.see(self.selected)
+        self._update_toggle_btn()
+        self._flash("Tarea '%s' %s." % (a.get("name", "tarea"),
+                                        "ACTIVADA" if a["enabled"] else "PAUSADA"))
+
+    def _update_toggle_btn(self):
+        if self.selected is None:
+            self.btn_toggle.config(text="Activar / pausar", state="disabled",
+                                   bg="#2a2a38", fg=MUT)
+            return
+        enabled = self.alarms[self.selected].get("enabled", True)
+        self.btn_toggle.config(state="normal")
+        if enabled:   # está activa -> botón rojo para PAUSAR
+            self.btn_toggle.config(text="⏸  Pausar", bg="#c04646", fg="#ffffff",
+                                   activebackground="#d85a5a")
+        else:         # está pausada -> botón verde para ACTIVAR
+            self.btn_toggle.config(text="▶  Activar", bg="#2f9e55", fg="#ffffff",
+                                   activebackground="#3cb766")
 
     def on_select(self, _):
         sel = self.lb.curselection()
         if not sel:
             return
-        self.selected = sel[0]
-        self._fill(self.alarms[self.selected])
+        self._fill(self.alarms[sel[0]])   # clear() dentro pone selected=None
+        self.selected = sel[0]            # ...por eso se fija DESPUÉS
+        self._update_toggle_btn()
 
     def test_now(self):
         a = self._collect()
