@@ -41,6 +41,13 @@ SOUND_FILE = os.path.join(APP_DIR, "alarm_sound.wav")
 ICO_FILE = os.path.join(APP_DIR, "icon.ico")
 ISO = "%Y-%m-%d %H:%M:%S"
 
+SCALE = 1.0  # factor DPI; se fija en el arranque segun la pantalla
+
+
+def px(n):
+    """Píxeles escalados al DPI real (evita el 'blur' por estirado de Windows)."""
+    return max(1, int(round(n * SCALE)))
+
 # ======================================================================
 #  Teclear en terminales  (Windows via ctypes, Linux via xdotool)
 # ======================================================================
@@ -305,13 +312,13 @@ class TimeField:
 
 class _TimePopup:
     """Reloj analógico para elegir hora (anillo exterior 0–11, interior 12–23) y minutos."""
-    R_OUT, R_IN, R_MIN = 98, 64, 98
 
     def __init__(self, anchor, h, m, cb):
         self.cb = cb
         self.h, self.m = h, m
         self.mode = "hour"
-        self.cx, self.cy = 140, 150
+        self.cx, self.cy = px(140), px(150)
+        self.R_OUT, self.R_IN, self.R_MIN = px(98), px(64), px(98)
         top = self.top = tk.Toplevel(anchor)
         top.wm_overrideredirect(True)
         top.configure(bg="#2a2a3a")
@@ -333,7 +340,7 @@ class _TimePopup:
         self.lh.bind("<Button-1>", lambda e: self._set_mode("hour"))
         self.lm.bind("<Button-1>", lambda e: self._set_mode("minute"))
 
-        self.cv = tk.Canvas(wrap, width=280, height=290, bg="#1c1c26", highlightthickness=0)
+        self.cv = tk.Canvas(wrap, width=px(280), height=px(290), bg="#1c1c26", highlightthickness=0)
         self.cv.pack()
         self.cv.bind("<Button-1>", self._click)
         self.cv.bind("<B1-Motion>", self._click)
@@ -364,7 +371,8 @@ class _TimePopup:
         c = self.cv
         c.delete("all")
         cx, cy = self.cx, self.cy
-        c.create_oval(cx - 112, cy - 112, cx + 112, cy + 112, fill="#13131a", outline="#2a2a3a", width=2)
+        c.create_oval(cx - px(112), cy - px(112), cx + px(112), cy + px(112),
+                      fill="#13131a", outline="#2a2a3a", width=px(2))
         self.lh.config(fg="#7aa2ff" if self.mode == "hour" else "#8a8aa0")
         self.lm.config(fg="#7aa2ff" if self.mode == "minute" else "#8a8aa0")
         if self.mode == "hour":
@@ -375,8 +383,8 @@ class _TimePopup:
                 x, y = cx + R * math.sin(th), cy - R * math.cos(th)
                 sel = (v == self.h)
                 if sel:
-                    c.create_line(cx, cy, x, y, fill="#7aa2ff", width=3)
-                    self._dot(x, y, 16, "#7aa2ff")
+                    c.create_line(cx, cy, x, y, fill="#7aa2ff", width=px(3))
+                    self._dot(x, y, px(16), "#7aa2ff")
                 fg = "#0b0b12" if sel else ("#e6e6f0" if outer else "#9a9ab0")
                 c.create_text(x, y, text="%02d" % v, fill=fg,
                               font=("Segoe UI", 10 if outer else 9, "bold" if sel else "normal"))
@@ -384,15 +392,15 @@ class _TimePopup:
             R = self.R_MIN
             th = math.radians(self.m * 6)
             x, y = cx + R * math.sin(th), cy - R * math.cos(th)
-            c.create_line(cx, cy, x, y, fill="#7aa2ff", width=3)
-            self._dot(x, y, 16, "#7aa2ff")
+            c.create_line(cx, cy, x, y, fill="#7aa2ff", width=px(3))
+            self._dot(x, y, px(16), "#7aa2ff")
             for v in range(0, 60, 5):
                 th = math.radians(v * 6)
                 x, y = cx + R * math.sin(th), cy - R * math.cos(th)
                 sel = (v == self.m)
                 c.create_text(x, y, text="%02d" % v, fill="#0b0b12" if sel else "#e6e6f0",
                               font=("Segoe UI", 10, "bold" if sel else "normal"))
-        self._dot(cx, cy, 4, "#7aa2ff")
+        self._dot(cx, cy, px(4), "#7aa2ff")
 
     def _click(self, e):
         dx, dy = e.x - self.cx, e.y - self.cy
@@ -433,8 +441,8 @@ class App:
         self.root = root
         root.title("TaskTriggerAntitrack")
         root.configure(bg=BG)
-        root.geometry("600x740")
-        root.minsize(560, 680)
+        root.geometry("%dx%d" % (px(600), px(740)))
+        root.minsize(px(560), px(680))
         if sys.platform == "win32" and os.path.exists(ICO_FILE):
             try:
                 root.iconbitmap(ICO_FILE)
@@ -838,7 +846,26 @@ class App:
         self.root.after(1000, self.tick)
 
 
+def _enable_dpi():
+    """Hace el proceso DPI-aware (texto nítido) y devuelve el factor de escala."""
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # System-DPI aware
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
+
+
 if __name__ == "__main__":
+    _enable_dpi()
     root = tk.Tk()
+    try:
+        dpi = root.winfo_fpixels("1i")   # px por pulgada de la pantalla
+        SCALE = dpi / 96.0               # 96 dpi = 100%
+        root.tk.call("tk", "scaling", dpi / 72.0)
+    except Exception:
+        pass
     App(root)
     root.mainloop()
