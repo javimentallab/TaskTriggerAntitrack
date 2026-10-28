@@ -25,6 +25,7 @@ import sys
 import json
 import math
 import time
+import queue
 import random
 import shutil
 import threading
@@ -442,9 +443,11 @@ class App:
 
         self.alarms = []
         self.selected = None
+        self.ui_queue = queue.Queue()   # callbacks de hilos -> hilo principal
         self._build_style()
         self._build_ui()
         self.load()
+        self._drain_ui()
         self.tick()
 
     # ---- estilo ttk oscuro ---------------------------------------
@@ -784,20 +787,34 @@ class App:
         self.root.after(3000, lambda: self.status.config(text=""))
 
     # ---- disparo --------------------------------------------------
+    def _drain_ui(self):
+        """Ejecuta en el hilo principal los callbacks que dejan los hilos de disparo."""
+        try:
+            while True:
+                fn = self.ui_queue.get_nowait()
+                try:
+                    fn()
+                except Exception as e:
+                    print("ui:", e)
+        except queue.Empty:
+            pass
+        self.root.after(100, self._drain_ui)
+
     def _fire(self, a, test=False):
         def work():
             if a.get("sound"):
                 play_sound(SOUND_FILE)
             if a["action"] == "terminal":
                 n = send_to_terminals(a.get("filter", ""), a.get("text", ""))
-                self.root.after(0, lambda: self._flash(
+                self.ui_queue.put(lambda: self._flash(
                     ("PRUEBA: " if test else "") + "enviado a %d ventana(s)" % n))
             else:
                 run_program(a.get("program", ""), a.get("file_url", ""))
-                self.root.after(0, lambda: self._flash(
+                self.ui_queue.put(lambda: self._flash(
                     ("PRUEBA: " if test else "") + "programa lanzado"))
             if a.get("popup") and a.get("message"):
-                self.root.after(0, lambda: messagebox.showinfo(a.get("name", "TaskTriggerAntitrack"), a["message"]))
+                self.ui_queue.put(lambda: messagebox.showinfo(
+                    a.get("name", "TaskTriggerAntitrack"), a["message"]))
 
         threading.Thread(target=work, daemon=True).start()
 
