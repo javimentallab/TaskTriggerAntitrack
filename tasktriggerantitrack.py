@@ -36,7 +36,7 @@ from tkinter import messagebox, filedialog, ttk
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ALARMS_FILE = os.path.join(APP_DIR, "alarms.json")
 SOUND_FILE = os.path.join(APP_DIR, "alarm_sound.wav")
-ICO_FILE = os.path.join(APP_DIR, "alarm.ico")
+ICO_FILE = os.path.join(APP_DIR, "icon.ico")
 ISO = "%Y-%m-%d %H:%M:%S"
 
 # ======================================================================

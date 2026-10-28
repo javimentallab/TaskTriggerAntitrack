@@ -75,6 +75,6 @@ ventanas que cruzan medianoche), descarta la parte ya pasada, y elige
 tasktriggerantitrack.py     aplicación (GUI + scheduler + acciones)
 tasktriggerantitrack.cmd    lanzador sin consola (Windows)
 alarm_sound.wav             sonido de disparo
-alarm.ico                   icono
+icon.ico                    icono (reloj + flechas de azar)
 alarms.json                 tareas guardadas (no versionado)
 ```
