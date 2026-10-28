@@ -312,6 +312,13 @@ def _hm(s):
     return int(h), int(m)
 
 
+def _parse_iso(s):
+    try:
+        return datetime.strptime(s, ISO)
+    except (ValueError, TypeError):
+        return None
+
+
 def compute_next(alarm, now=None):
     now = now or datetime.now()
     if alarm.get("time_mode", "fixed") == "fixed":
@@ -934,14 +941,14 @@ class App:
     def refresh(self):
         self.lb.delete(0, tk.END)
         for a in self.alarms:
-            when = (a["time"] if a["time_mode"] == "fixed"
-                    else "%s–%s rnd" % (a["start_time"], a["end_time"]))
+            when = (a.get("time", "--:--") if a.get("time_mode", "fixed") == "fixed"
+                    else "%s–%s rnd" % (a.get("start_time", "??"), a.get("end_time", "??")))
             nf = a.get("next_fire", "")[-8:]
-            tag = "✎" if a["action"] == "terminal" else "▷"
+            tag = "✎" if a.get("action") == "terminal" else "▷"
             state = "●" if a.get("enabled", True) else "⏸"
             daily = "↻" if a.get("daily") else " "
             self.lb.insert(tk.END, "%s %s %-16s %-11s next %s %s" %
-                           (state, tag, a["name"][:16], when, nf, daily))
+                           (state, tag, a.get("name", "?")[:16], when, nf, daily))
 
     def save(self):
         try:
@@ -954,16 +961,23 @@ class App:
         if os.path.exists(ALARMS_FILE):
             try:
                 with open(ALARMS_FILE, encoding="utf-8") as f:
-                    self.alarms = json.load(f)
+                    data = json.load(f)
+                self.alarms = data if isinstance(data, list) else []
             except Exception as e:
                 print("load:", e)
                 self.alarms = []
-        # recalcular disparos pasados al arrancar
+        # recalcular disparos pasados al arrancar (tolerante a JSON editado a mano)
         now = datetime.now()
         for a in self.alarms:
-            nf = a.get("next_fire")
-            if a.get("enabled", True) and (not nf or datetime.strptime(nf, ISO) <= now):
-                a["next_fire"] = compute_next(a, now).strftime(ISO)
+            if not a.get("enabled", True):
+                continue
+            nf = _parse_iso(a.get("next_fire"))
+            if nf is None or nf <= now:
+                try:
+                    a["next_fire"] = compute_next(a, now).strftime(ISO)
+                except Exception as e:
+                    print("load/compute:", e)
+                    a["enabled"] = False
         self.refresh()
         self.save()
 
@@ -1012,13 +1026,17 @@ class App:
         for a in self.alarms:
             if not a.get("enabled", True):
                 continue
-            nf = a.get("next_fire")
-            if nf and now >= datetime.strptime(nf, ISO):
-                self._fire(a)
-                if a.get("daily"):
-                    a["next_fire"] = compute_next(a, now + timedelta(minutes=1)).strftime(ISO)
-                else:
-                    a["enabled"] = False
+            nf = _parse_iso(a.get("next_fire"))
+            if nf and now >= nf:
+                try:
+                    self._fire(a)
+                    if a.get("daily"):
+                        a["next_fire"] = compute_next(a, now + timedelta(minutes=1)).strftime(ISO)
+                    else:
+                        a["enabled"] = False
+                except Exception as e:
+                    print("tick:", e)
+                    a["enabled"] = False     # no reintentar en bucle una tarea rota
                 changed = True
         if changed:
             self.refresh()
