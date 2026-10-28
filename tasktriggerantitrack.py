@@ -30,6 +30,7 @@ import shlex
 import random
 import shutil
 import threading
+import traceback
 import subprocess
 from datetime import datetime, timedelta
 
@@ -48,6 +49,18 @@ SCALE = 1.0  # factor DPI; se fija en el arranque segun la pantalla
 def px(n):
     """Píxeles escalados al DPI real (evita el 'blur' por estirado de Windows)."""
     return max(1, int(round(n * SCALE)))
+
+
+LOG_FILE = os.path.join(APP_DIR, "error.log")
+
+
+def log_error(where, text):
+    """Deja traza en error.log (pythonw no tiene consola: si algo peta, aquí queda)."""
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write("%s [%s]\n%s\n" % (datetime.now().strftime(ISO), where, text))
+    except Exception:
+        pass
 
 # ======================================================================
 #  Teclear en terminales  (Windows via ctypes, Linux via xdotool)
@@ -546,6 +559,9 @@ class App:
         self.alarms = []
         self.selected = None
         self.ui_queue = queue.Queue()   # callbacks de hilos -> hilo principal
+        # registrar excepciones de callbacks (si no, se tragan en pythonw)
+        root.report_callback_exception = lambda e, v, tb: log_error(
+            "callback", "".join(traceback.format_exception(e, v, tb)))
         self._build_style()
         self._build_ui()
         self.load()
@@ -714,7 +730,8 @@ class App:
         inner.pack(fill="both", expand=True, pady=(4, 0))
         self.lb = tk.Listbox(inner, bg=CARD, fg=FG, selectbackground=ACC, selectforeground="#0b0b12",
                              borderwidth=0, highlightthickness=1, highlightcolor=ACC,
-                             activestyle="none", font=("Consolas", 10))
+                             activestyle="none", font=("Consolas", 10),
+                             exportselection=False)   # no perder la selección al escribir en el formulario
         self.lb.pack(side="left", fill="both", expand=True)
         sb = ttk.Scrollbar(inner, command=self.lb.yview)
         sb.pack(side="right", fill="y")
@@ -723,6 +740,7 @@ class App:
 
         row = ttk.Frame(self.root, style="TFrame")
         row.pack(fill="x", padx=14, pady=(0, 12))
+        ttk.Button(row, text="Editar", style="Accent.TButton", command=self.edit_selected).pack(side="left", padx=(0, 8))
         self.btn_toggle = tk.Button(row, text="Activar / pausar", command=self.toggle,
                                     bd=0, padx=16, pady=7, font=("Segoe UI", 10, "bold"),
                                     cursor="hand2", bg="#2a2a38", fg=FG, activebackground="#33334a",
@@ -932,6 +950,18 @@ class App:
         self.selected = sel[0]            # ...por eso se fija DESPUÉS
         self._update_toggle_btn()
 
+    def edit_selected(self):
+        sel = self.lb.curselection()
+        idx = sel[0] if sel else self.selected
+        if idx is None or idx >= len(self.alarms):
+            self._flash("Selecciona una tarea de la lista para editar.")
+            return
+        self._fill(self.alarms[idx])
+        self.selected = idx
+        self._update_toggle_btn()
+        self._flash("Editando '%s': cambia y pulsa «Guardar tarea»." %
+                    self.alarms[idx].get("name", "tarea"))
+
     def test_now(self):
         a = self._collect()
         if a:
@@ -957,11 +987,14 @@ class App:
                            (state, tag, a.get("name", "?")[:16], when, nf, daily))
 
     def save(self):
+        # escritura atómica: tmp + replace (evita fichero a medias / corrupto)
         try:
-            with open(ALARMS_FILE, "w", encoding="utf-8") as f:
+            tmp = ALARMS_FILE + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.alarms, f, indent=2, ensure_ascii=False)
+            os.replace(tmp, ALARMS_FILE)
         except Exception as e:
-            print("save:", e)
+            log_error("save", str(e))
 
     def load(self):
         if os.path.exists(ALARMS_FILE):
@@ -1007,22 +1040,25 @@ class App:
 
     def _fire(self, a, test=False):
         def work():
-            if a.get("sound"):
-                play_sound(SOUND_FILE)
-            if a["action"] == "terminal":
-                n = send_to_terminals(a.get("filter", ""), a.get("text", ""),
-                                      a.get("prekeys", ""), a.get("enters", 1),
-                                      a.get("targets", "all"))
-                self.ui_queue.put(lambda: self._flash(
-                    ("PRUEBA: " if test else "") + "enviado a %d ventana(s)" % n))
-            else:
-                run_program(a.get("program", ""), a.get("file_url", ""),
-                            a.get("args", ""), a.get("workdir", ""), a.get("winmode", "normal"))
-                self.ui_queue.put(lambda: self._flash(
-                    ("PRUEBA: " if test else "") + "programa lanzado"))
-            if a.get("popup") and a.get("message"):
-                self.ui_queue.put(lambda: messagebox.showinfo(
-                    a.get("name", "TaskTriggerAntitrack"), a["message"]))
+            try:
+                if a.get("sound"):
+                    play_sound(SOUND_FILE)
+                if a["action"] == "terminal":
+                    n = send_to_terminals(a.get("filter", ""), a.get("text", ""),
+                                          a.get("prekeys", ""), a.get("enters", 1),
+                                          a.get("targets", "all"))
+                    self.ui_queue.put(lambda: self._flash(
+                        ("PRUEBA: " if test else "") + "enviado a %d ventana(s)" % n))
+                else:
+                    run_program(a.get("program", ""), a.get("file_url", ""),
+                                a.get("args", ""), a.get("workdir", ""), a.get("winmode", "normal"))
+                    self.ui_queue.put(lambda: self._flash(
+                        ("PRUEBA: " if test else "") + "programa lanzado"))
+                if a.get("popup") and a.get("message"):
+                    self.ui_queue.put(lambda: messagebox.showinfo(
+                        a.get("name", "TaskTriggerAntitrack"), a["message"]))
+            except Exception:
+                log_error("fire", traceback.format_exc())
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -1063,6 +1099,26 @@ def _enable_dpi():
 
 
 if __name__ == "__main__":
+    import socket
+
+    # --- instancia única: si ya hay una abierta, pedirle que se muestre y salir ---
+    LOCK_PORT = 49677
+    _lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        _lock.bind(("127.0.0.1", LOCK_PORT))
+        _lock.listen(1)
+        _is_first = True
+    except OSError:
+        _is_first = False
+    if not _is_first:
+        try:
+            c = socket.create_connection(("127.0.0.1", LOCK_PORT), timeout=1)
+            c.sendall(b"SHOW")
+            c.close()
+        except Exception:
+            pass
+        sys.exit(0)
+
     _enable_dpi()
     root = tk.Tk()
     try:
@@ -1071,7 +1127,25 @@ if __name__ == "__main__":
         root.tk.call("tk", "scaling", dpi / 72.0)
     except Exception:
         pass
-    App(root)
+    app = App(root)
+
+    def _accept_loop():
+        while True:
+            try:
+                conn, _ = _lock.accept()
+                conn.close()
+            except OSError:
+                break
+            app.ui_queue.put(lambda: (root.deiconify(), root.lift(),
+                                      root.attributes("-topmost", True),
+                                      root.after(250, lambda: root.attributes("-topmost", False)),
+                                      root.focus_force()))
+    threading.Thread(target=_accept_loop, daemon=True).start()
+
     if "--min" in sys.argv:        # autoarranque: empezar minimizada
         root.iconify()
-    root.mainloop()
+    try:
+        root.mainloop()
+    except Exception:
+        log_error("mainloop", traceback.format_exc())
+        raise
