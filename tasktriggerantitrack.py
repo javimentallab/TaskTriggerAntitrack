@@ -1048,6 +1048,37 @@ class App:
         self.status.config(text=msg)
         self.root.after(3000, lambda: self.status.config(text=""))
 
+    def _show_alert(self, title, msg):
+        """Aviso emergente propio, SIEMPRE al frente (aunque la app esté minimizada)."""
+        try:
+            top = tk.Toplevel(self.root)
+            top.title(title)
+            top.configure(bg=CARD)
+            top.resizable(False, False)
+            tk.Label(top, text=title, bg=CARD, fg=ACC, font=("Segoe UI Semibold", 13),
+                     padx=22, pady=(16, 2)).pack(anchor="w")
+            tk.Label(top, text=msg, bg=CARD, fg=FG, font=("Segoe UI", 12),
+                     wraplength=px(360), justify="left", padx=22, pady=(0, 10)).pack(anchor="w")
+            tk.Button(top, text="OK", command=top.destroy, bg=ACC, fg="#0b0b12",
+                      bd=0, padx=24, pady=6, font=("Segoe UI", 10, "bold"),
+                      cursor="hand2").pack(pady=(0, 16))
+            top.bind("<Return>", lambda e: top.destroy())
+            top.bind("<Escape>", lambda e: top.destroy())
+            top.update_idletasks()
+            w, h = top.winfo_reqwidth(), top.winfo_reqheight()
+            sw, sh = top.winfo_screenwidth(), top.winfo_screenheight()
+            top.geometry("%dx%d+%d+%d" % (w, h, (sw - w) // 2, (sh - h) // 3))
+            top.attributes("-topmost", True)
+            top.deiconify()
+            top.lift()
+            top.focus_force()
+            try:
+                top.bell()
+            except Exception:
+                pass
+        except Exception:
+            log_error("alert", traceback.format_exc())
+
     # ---- disparo --------------------------------------------------
     def _drain_ui(self):
         """Ejecuta en el hilo principal los callbacks que dejan los hilos de disparo."""
@@ -1078,9 +1109,10 @@ class App:
                                 a.get("args", ""), a.get("workdir", ""), a.get("winmode", "normal"))
                     self.ui_queue.put(lambda: self._flash(
                         ("PRUEBA: " if test else "") + "programa lanzado"))
-                if a.get("popup") and a.get("message"):
-                    self.ui_queue.put(lambda: messagebox.showinfo(
-                        a.get("name", "TaskTriggerAntitrack"), a["message"]))
+                if a.get("popup"):
+                    _name = a.get("name", "TaskTriggerAntitrack")
+                    _msg = a.get("message") or ("Tarea «%s» disparada." % _name)
+                    self.ui_queue.put(lambda: self._show_alert(_name, _msg))
             except Exception:
                 log_error("fire", traceback.format_exc())
 
