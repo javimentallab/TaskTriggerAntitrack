@@ -317,7 +317,7 @@ def run_program(program, file_url, args="", workdir="", winmode="normal"):
         if program:
             if sys.platform == "win32":
                 if winmode == "elevated":   # pedir UAC con ShellExecute 'runas'
-                    params = " ".join('"%s"' % a for a in tail)
+                    params = subprocess.list2cmdline(tail)   # quoting correcto de Windows
                     ctypes.windll.shell32.ShellExecuteW(None, "runas", program, params, cwd, 1)
                     return
                 si, creation = None, 0
