@@ -110,6 +110,21 @@ if sys.platform == "win32":
     def _send(inp):
         user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
 
+    _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+    def _proc_name(pid):
+        h = kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not h:
+            return ""
+        try:
+            buf = ctypes.create_unicode_buffer(512)
+            size = wintypes.DWORD(512)
+            if kernel32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size)):
+                return os.path.basename(buf.value)
+            return ""
+        finally:
+            kernel32.CloseHandle(h)
+
     def list_windows(filt):
         res = []
         filt = (filt or "").lower()
@@ -123,8 +138,17 @@ if sys.platform == "win32":
             buf = ctypes.create_unicode_buffer(n + 1)
             user32.GetWindowTextW(h, buf, n + 1)
             t = buf.value
-            if (not filt) or (filt in t.lower()):
+            # el filtro casa contra el TÍTULO o contra el nombre del PROCESO
+            # (así "WindowsTerminal" pilla las terminales aunque el título sea otra cosa)
+            if not filt:
                 res.append((h, t))
+            elif filt in t.lower():
+                res.append((h, t))
+            else:
+                pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(h, ctypes.byref(pid))
+                if filt in _proc_name(pid.value).lower():
+                    res.append((h, t))
             return True
 
         user32.EnumWindows(EnumWindowsProc(cb), 0)
@@ -661,7 +685,7 @@ class App:
         # accion terminal
         self.term_box = ttk.Frame(card, style="Card.TFrame")
         self.term_box.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(6, 0))
-        self.filt = self._row_entry(self.term_box, "Filtro de título", 0, "claude")
+        self.filt = self._row_entry(self.term_box, "Filtro (título/proceso)", 0, "WindowsTerminal")
         self.text = self._row_entry(self.term_box, "Texto a enviar", 1, "continua")
         self.prekeys = self._row_entry(self.term_box, "Teclas previas", 2, "")
         tr = ttk.Frame(self.term_box, style="Card.TFrame")
@@ -674,7 +698,7 @@ class App:
         self.enters = ttk.Combobox(tr, width=3, state="readonly", values=[0, 1, 2, 3, 4, 5])
         self.enters.set(1)
         self.enters.pack(side="left", padx=(4, 0))
-        ttk.Label(self.term_box, text="Casa ventanas cuyo título contenga el filtro; teclea el texto + Enter.",
+        ttk.Label(self.term_box, text="Casa por TÍTULO o por PROCESO (p. ej. 'WindowsTerminal'); teclea el texto + Enter.",
                   style="Mut.TLabel").grid(row=4, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
         # accion programa
@@ -714,7 +738,7 @@ class App:
         card.grid_columnconfigure(1, weight=1)
 
         # ayuda contextual
-        Tooltip(self.filt, "Parte del título de las ventanas objetivo. Ej.: 'claude'.")
+        Tooltip(self.filt, "Parte del TÍTULO o del nombre del PROCESO de las ventanas. Ej.: 'WindowsTerminal'.")
         Tooltip(self.text, "Lo que se teclea en cada ventana, seguido de Enter.")
         Tooltip(self.prekeys, "Teclas antes del texto. Ej.: esc  o  ctrl+c  (separa varias con espacio).")
         Tooltip(self.program, "Programa a ejecutar. Args/Archivo/URL se le pasan como argumentos.")
