@@ -1055,17 +1055,19 @@ class App:
             top.title(title)
             top.configure(bg=CARD)
             top.resizable(False, False)
-            tk.Label(top, text=title, bg=CARD, fg=ACC, font=("Segoe UI Semibold", 13),
-                     padx=22, pady=(16, 2)).pack(anchor="w")
+            tk.Label(top, text=title, bg=CARD, fg=ACC,
+                     font=("Segoe UI Semibold", 13)).pack(anchor="w", padx=22, pady=(16, 2))
             tk.Label(top, text=msg, bg=CARD, fg=FG, font=("Segoe UI", 12),
-                     wraplength=px(360), justify="left", padx=22, pady=(0, 10)).pack(anchor="w")
+                     wraplength=px(360), justify="left").pack(anchor="w", padx=22, pady=(0, 10))
             tk.Button(top, text="OK", command=top.destroy, bg=ACC, fg="#0b0b12",
                       bd=0, padx=24, pady=6, font=("Segoe UI", 10, "bold"),
                       cursor="hand2").pack(pady=(0, 16))
             top.bind("<Return>", lambda e: top.destroy())
             top.bind("<Escape>", lambda e: top.destroy())
             top.update_idletasks()
-            w, h = top.winfo_reqwidth(), top.winfo_reqheight()
+            top.minsize(px(360), px(150))
+            w = max(top.winfo_reqwidth(), px(360))
+            h = max(top.winfo_reqheight(), px(150))
             sw, sh = top.winfo_screenwidth(), top.winfo_screenheight()
             top.geometry("%dx%d+%d+%d" % (w, h, (sw - w) // 2, (sh - h) // 3))
             top.attributes("-topmost", True)
