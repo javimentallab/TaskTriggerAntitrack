@@ -1020,15 +1020,40 @@ class App:
         except Exception as e:
             log_error("save", str(e))
 
+    def _backup_bad_file(self, why):
+        """Copia alarms.json a alarms.json.corrupto-<fecha> antes de que nada lo pise."""
+        dest = "%s.corrupto-%s" % (ALARMS_FILE, datetime.now().strftime("%Y%m%d-%H%M%S"))
+        try:
+            shutil.copy2(ALARMS_FILE, dest)
+        except Exception as e:
+            log_error("load/backup", str(e))
+            dest = None
+        log_error("load", "%s (copia: %s)" % (why, dest or "NO se pudo copiar"))
+        return dest
+
     def load(self):
+        broken = False                   # fichero ilegible: NO guardar encima
         if os.path.exists(ALARMS_FILE):
             try:
                 with open(ALARMS_FILE, encoding="utf-8") as f:
                     data = json.load(f)
-                self.alarms = data if isinstance(data, list) else []
+                if not isinstance(data, list):
+                    raise ValueError("no es una lista de tareas")
             except Exception as e:
-                print("load:", e)
+                broken = True
                 self.alarms = []
+                dest = self._backup_bad_file("alarms.json ilegible: %s" % e)
+                # el mensaje se monta YA: `e` deja de existir al salir del except
+                msg = ("No he podido leer alarms.json:\n%s\n\n" % e +
+                       ("Lo he copiado a:\n%s\n\n" % dest if dest else "") +
+                       "La lista está vacía, pero el fichero NO se ha tocado. Si guardas o "
+                       "creas una tarea, se reescribirá: arréglalo antes o recupera la copia.")
+                self.root.after(300, lambda: messagebox.showwarning("Tareas sin cargar", msg))
+            else:
+                self.alarms = [a for a in data if isinstance(a, dict)]
+                if len(self.alarms) != len(data):    # entradas basura: se quitan, con copia
+                    self._backup_bad_file("%d entradas no válidas descartadas"
+                                          % (len(data) - len(self.alarms)))
         # recalcular disparos pasados al arrancar (tolerante a JSON editado a mano)
         now = datetime.now()
         for a in self.alarms:
@@ -1042,7 +1067,8 @@ class App:
                     print("load/compute:", e)
                     a["enabled"] = False
         self.refresh()
-        self.save()
+        if not broken:
+            self.save()
 
     def _flash(self, msg):
         self.status.config(text=msg)

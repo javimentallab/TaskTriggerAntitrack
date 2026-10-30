@@ -4,3 +4,4 @@ __pycache__/
 err.txt
 out.txt
 error.log
+alarms.json.corrupto-*
