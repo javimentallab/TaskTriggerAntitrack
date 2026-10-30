@@ -22,9 +22,11 @@ Cada tarea de la lista combina **cuándo** se dispara con **qué** hace:
   el azar si la hora es aleatoria).
 
 ### Qué
-- **Escribir en terminales**: busca las ventanas cuyo título contenga el *filtro*
-  (por defecto `claude`), las enfoca una a una y teclea el *texto* (por defecto
-  `continua`) seguido de **Enter**. Opcional: *teclas previas* (p. ej. `esc` o
+- **Escribir en terminales**: busca las ventanas que casen con el *filtro* (por
+  defecto `WindowsTerminal`), las enfoca una a una y teclea el *texto* (por defecto
+  `continua`) seguido de **Enter**. El filtro busca en el **título** de la ventana y,
+  en Windows, también en el **nombre del proceso**: así `WindowsTerminal` encuentra las
+  terminales aunque su título cambie. Filtro vacío = todas las ventanas. Opcional: *teclas previas* (p. ej. `esc` o
   `ctrl+c` antes del texto), *nº de Enter* a pulsar (`0` = enviar sin Enter), y a
   *qué ventanas* actuar (todas / solo la primera / solo la que tiene el foco).
 - **Ejecutar programa / abrir**: lanza un programa o abre un archivo/URL en su
@@ -74,7 +76,17 @@ En Windows también puedes hacer doble clic en `tasktriggerantitrack.cmd` (abre 
 3. Deja la ventana abierta: cada segundo comprueba y dispara lo que toque.
 
 En la lista: `●` activa / `⏸` pausada · `✎` terminal / `▷` programa · `↻` repite a diario ·
-`next HH:MM:SS` el próximo disparo. Selecciona una tarea para editarla, pausarla o eliminarla.
+`next HH:MM:SS` el próximo disparo (o `next DD/MM HH:MM` si no es hoy). Selecciona una tarea para editarla, pausarla o eliminarla.
+
+### Arranque y fiabilidad
+
+- **Instancia única**: si ya está abierta, lanzarla otra vez solo trae al frente la
+  ventana existente (no duplica disparos).
+- **Autoarranque**: con `--min` arranca minimizada; pensado para un acceso directo en
+  la carpeta de Inicio de Windows (`shell:startup`) o en el autostart del escritorio.
+- Las tareas se guardan de forma **atómica** (no se corrompen si se corta a mitad) y
+  una tarea con datos inválidos se desactiva en vez de impedir el arranque. Cualquier
+  fallo queda en `error.log` (con `pythonw` no hay consola).
 
 ## Requisitos
 
@@ -87,7 +99,12 @@ En la lista: `●` activa / `⏸` pausada · `✎` terminal / `▷` programa · 
 ## Persistencia
 
 Las tareas se guardan en `alarms.json` junto al script. No se versiona (contiene tu
-configuración personal).
+configuración personal), igual que `error.log`.
+
+## Seguridad
+
+Escaneo con **Trivy** en cada push (`.github/workflows/trivy.yml`): vulnerabilidades,
+secretos y malas configuraciones.
 
 ## Licencia
 
