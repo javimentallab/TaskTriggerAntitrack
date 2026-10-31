@@ -2,6 +2,8 @@
 
 [English version](README.md)
 
+<p align="center"><img src="docs/screenshot.png" width="420" alt="TaskTriggerAntitrack window"></p>
+
 Programador de tareas de escritorio (Python + tkinter, **sin dependencias pip**) que
 a una hora dispara una acción. Fusiona dos herramientas:
 

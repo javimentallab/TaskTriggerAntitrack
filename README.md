@@ -2,6 +2,8 @@
 
 [Versión en español](README.es.md)
 
+<p align="center"><img src="docs/screenshot.png" width="420" alt="TaskTriggerAntitrack window"></p>
+
 Desktop task scheduler (Python + tkinter, **no pip dependencies**) that fires an action
 at a given time. It merges two tools:
 
