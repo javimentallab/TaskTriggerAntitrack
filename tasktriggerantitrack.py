@@ -142,7 +142,7 @@ if sys.platform == "win32":
         res = []
         filt = (filt or "").lower()
 
-        def cb(h, _):
+        def cb(h, _lparam):
             if not user32.IsWindowVisible(h):
                 return True
             n = user32.GetWindowTextLengthW(h)
@@ -230,7 +230,7 @@ if sys.platform == "win32":
             wins = list_windows(filt)
             if targets == "first":
                 wins = wins[:1]
-        for h, _ in wins:
+        for h, _x in wins:
             if targets != "focused":
                 _focus(h)
                 time.sleep(0.35)
@@ -284,7 +284,7 @@ else:  # Linux / otros: xdotool
             wins = list_windows(filt)
             if targets == "first":
                 wins = wins[:1]
-        for wid, _ in wins:
+        for wid, _x in wins:
             if targets != "focused":
                 subprocess.call(["xdotool", "windowactivate", "--sync", wid])
                 time.sleep(0.3)
@@ -563,7 +563,7 @@ class _TimePopup:
             self.lm.config(text="%02d" % self.m)
         self._draw()
 
-    def _release(self, _):
+    def _release(self, _arg):
         # tras elegir la hora, pasar a minutos automáticamente
         if self.mode == "hour":
             self._set_mode("minute")
@@ -979,7 +979,7 @@ class App:
             self.btn_toggle.config(text=_("▶  Activar"), bg="#2f9e55", fg="#ffffff",
                                    activebackground="#3cb766")
 
-    def on_select(self, _):
+    def on_select(self, _arg):
         sel = self.lb.curselection()
         if not sel:
             return
