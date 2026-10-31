@@ -1,111 +1,121 @@
 # TaskTriggerAntitrack
 
-Programador de tareas de escritorio (Python + tkinter, **sin dependencias pip**) que
-a una hora dispara una acción. Fusiona dos herramientas:
+[Versión en español](README.es.md)
 
-- **Alarma** — dispara a una hora **aleatoria dentro de un rango**, ejecuta un programa
-  o abre un archivo/URL, con sonido y aviso.
-- **Continua terminales** — a una hora, escribe un texto + **Enter** en todas las
-  terminales abiertas cuyo título case un filtro (reanudar
-  [Claude Code](https://claude.com/claude-code) cuando se restablece el límite de uso).
+Desktop task scheduler (Python + tkinter, **no pip dependencies**) that fires an action
+at a given time. It merges two tools:
+
+- **Alarm** — fires at a **random time within a range**, runs a program or opens a
+  file/URL, with a sound and a pop-up.
+- **Resume terminals** — at a given time, types a text + **Enter** into every open
+  terminal whose title matches a filter (to resume
+  [Claude Code](https://claude.com/claude-code) when the usage limit resets).
 
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6) ![Linux](https://img.shields.io/badge/Linux-X11-FCC624) ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB) ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Qué hace cada tarea
+## What each task does
 
-Cada tarea de la lista combina **cuándo** se dispara con **qué** hace:
+Each task in the list combines **when** it fires with **what** it does:
 
-### Cuándo
-- **Hora fija** `HH:MM`.
-- **Aleatoria en un rango** `[desde, hasta]`: elige un instante al azar dentro de la ventana.
-- **Repetir cada día**: al dispararse, se reprograma para el día siguiente (recalculando
-  el azar si la hora es aleatoria).
+### When
+- **Fixed time** `HH:MM`.
+- **Random within a range** `[from, to]`: picks a random moment inside the window.
+- **Repeat every day**: once it fires, it is rescheduled for the next day (drawing a new
+  random time if the time is random).
 
-### Qué
-- **Escribir en terminales**: busca las ventanas que casen con el *filtro* (por
-  defecto `WindowsTerminal`), las enfoca una a una y teclea el *texto* (por defecto
-  `continua`) seguido de **Enter**. El filtro busca en el **título** de la ventana y,
-  en Windows, también en el **nombre del proceso**: así `WindowsTerminal` encuentra las
-  terminales aunque su título cambie. Filtro vacío = todas las ventanas. Opcional: *teclas previas* (p. ej. `esc` o
-  `ctrl+c` antes del texto), *nº de Enter* a pulsar (`0` = enviar sin Enter), y a
-  *qué ventanas* actuar (todas / solo la primera / solo la que tiene el foco).
-- **Ejecutar programa / abrir**: lanza un programa o abre un archivo/URL en su
-  aplicación por defecto. Opcional: *argumentos* (estilo línea de comandos),
-  *carpeta de trabajo* y *modo de ventana* (normal / minimizado / oculto / elevado
-  con UAC).
+### What
+- **Type into terminals**: finds the windows that match the *filter* (by default
+  `WindowsTerminal`), focuses them one by one and types the *text* (by default
+  `continua`) followed by **Enter**. The filter looks at the window **title** and, on
+  Windows, also at the **process name**: that way `WindowsTerminal` finds the terminals
+  even when their title changes. Empty filter = every window. Optional: *keys before*
+  (e.g. `esc` or `ctrl+c` before the text), *number of Enters* to press (`0` = send
+  without Enter), and *which windows* to act on (all / only the first / only the
+  focused one).
+- **Run program / open**: launches a program or opens a file/URL in its default
+  application. Optional: *arguments* (command-line style), *working folder* and *window
+  mode* (normal / minimised / hidden / elevated with UAC).
 
 ### Extras
-- **Sonido** al disparar.
-- **Aviso emergente** con un mensaje.
+- **Sound** when it fires.
+- **Pop-up** with a message.
 
-## Intervalo aleatorio: antitrazabilidad
+## Random interval: anti-tracking
 
-> La opción de **hora aleatoria en un rango** no es solo comodidad: es una función de
-> **antitrazabilidad**.
+> The **random time within a range** option is not just a convenience: it is an
+> **anti-tracking** feature.
 
-Cuando una tarea abre siempre una web o ejecuta un programa a la **misma hora exacta**,
-ese patrón horario es predecible: cualquiera que observe el tráfico o el sistema puede
-anticipar *cuándo* vas a conectarte a un determinado servicio o *cuándo* se va a lanzar
-un determinado programa, y correlacionar esa actividad contigo.
+When a task always opens a website or runs a program at **exactly the same time**, that
+schedule is predictable: anyone watching the traffic or the system can anticipate
+*when* you are going to connect to a given service or *when* a given program will
+start, and link that activity to you.
 
-Al elegir la hora de disparo **al azar dentro de un rango** (p. ej. "en algún momento
-entre las 02:00 y las 06:00"), el momento concreto deja de ser predecible en cada
-ejecución. Así:
+By picking the firing time **at random within a range** (e.g. "sometime between 02:00
+and 06:00"), the exact moment is no longer predictable on each run. So:
 
-- No hay una **firma horaria** fija que delate la conexión o el arranque del programa.
-- Se **rompe la correlación** entre una hora conocida y la acción, dificultando inferir
-  qué web o qué programa se va a usar a partir del reloj.
-- Cada día (con *Repetir cada día*) el azar se recalcula, de modo que ni siquiera se
-  mantiene estable de una jornada a otra.
+- There is no fixed **time signature** giving away the connection or the program start.
+- The **link** between a known time and the action is **broken**, making it harder to
+  infer from the clock which website or program is going to be used.
+- Every day (with *Repeat every day*) the random time is drawn again, so it does not even
+  stay the same from one day to the next.
 
-Es especialmente útil para la acción **Ejecutar programa / abrir**: programar una
-apertura de un servicio a una hora impredecible dentro de una ventana amplia.
+It is especially useful for the **Run program / open** action: scheduling a service to
+open at an unpredictable time within a wide window.
 
-## Uso
+## Usage
 
 ```bash
 python tasktriggerantitrack.py
 ```
 
-En Windows también puedes hacer doble clic en `tasktriggerantitrack.cmd` (abre la ventana sin consola).
+On Windows you can also double-click `tasktriggerantitrack.cmd` (opens the window
+without a console).
 
-1. Rellena **nombre**, elige **hora fija** o **rango**, y el **tipo de acción**.
-   Las horas se eligen en un **selector tipo reloj**: pincha la hora en el anillo
-   (exterior `0–11`, interior `12–23`) y luego los minutos.
-2. **Guardar tarea** (aparece en la lista). **Probar ahora** para verla disparar en el acto.
-3. Deja la ventana abierta: cada segundo comprueba y dispara lo que toque.
+1. Fill in a **name**, choose a **fixed time** or a **range**, and the **action type**.
+   Times are picked on a **clock-style picker**: click the hour on the ring (outer
+   `0–11`, inner `12–23`) and then the minutes.
+2. **Save task** (it shows up in the list). **Test now** to see it fire straight away.
+3. Leave the window open: every second it checks and fires whatever is due.
 
-En la lista: `●` activa / `⏸` pausada · `✎` terminal / `▷` programa · `↻` repite a diario ·
-`next HH:MM:SS` el próximo disparo (o `next DD/MM HH:MM` si no es hoy). Selecciona una tarea para editarla, pausarla o eliminarla.
+In the list: `●` active / `⏸` paused · `✎` terminal / `▷` program · `↻` repeats daily ·
+`next HH:MM:SS` the next firing (or `next DD/MM HH:MM` if not today). Select a task to
+edit, pause or delete it.
 
-### Arranque y fiabilidad
+### Startup and reliability
 
-- **Instancia única**: si ya está abierta, lanzarla otra vez solo trae al frente la
-  ventana existente (no duplica disparos).
-- **Autoarranque**: con `--min` arranca minimizada; pensado para un acceso directo en
-  la carpeta de Inicio de Windows (`shell:startup`) o en el autostart del escritorio.
-- Las tareas se guardan de forma **atómica** (no se corrompen si se corta a mitad) y
-  una tarea con datos inválidos se desactiva en vez de impedir el arranque. Cualquier
-  fallo queda en `error.log` (con `pythonw` no hay consola).
+- **Single instance**: if it is already open, launching it again just brings the
+  existing window to the front (no duplicate firings).
+- **Autostart**: `--min` starts it minimised; meant for a shortcut in the Windows
+  Startup folder (`shell:startup`) or in the desktop's autostart.
+- Tasks are saved **atomically** (they are not corrupted if interrupted halfway) and a
+  task with invalid data is disabled instead of stopping the app from starting. Any
+  failure goes to `error.log` (with `pythonw` there is no console).
 
-## Requisitos
+## Languages
 
-- **Python 3.8+** con tkinter (incluido de serie en Windows y en la mayoría de distros).
-- **Windows**: nada más. El enfoque y tecleo en ventanas usa Win32 vía `ctypes`, y el
-  sonido usa `winsound` (ambos de la stdlib).
-- **Linux (X11)**: `xdotool` para enfocar/teclear en ventanas, y `aplay`/`paplay` para el
-  sonido. (En Wayland el tecleo en ventanas ajenas puede estar restringido.)
+The interface is in English, Spanish, Portuguese, French, German, Italian, Dutch, Polish, Russian,
+Ukrainian, Chinese, Japanese, Korean, Thai and Hindi. It follows the system's language; to pick one,
+start it with `--lang xx` (e.g. `--lang de`) or set the `TTA_LANG` environment variable. The texts live
+in `tta_lang.py`.
 
-## Persistencia
+## Requirements
 
-Las tareas se guardan en `alarms.json` junto al script. No se versiona (contiene tu
-configuración personal), igual que `error.log`.
+- **Python 3.8+** with tkinter (included by default on Windows and most distros).
+- **Windows**: nothing else. Focusing and typing into windows uses Win32 through
+  `ctypes`, and the sound uses `winsound` (both in the standard library).
+- **Linux (X11)**: `xdotool` to focus/type into windows, and `aplay`/`paplay` for the
+  sound. (On Wayland, typing into other apps' windows may be restricted.)
 
-## Seguridad
+## Storage
 
-Escaneo con **Trivy** en cada push (`.github/workflows/trivy.yml`): vulnerabilidades,
-secretos y malas configuraciones.
+Tasks are saved in `alarms.json` next to the script. It is not versioned (it holds your
+personal setup), and neither is `error.log`.
 
-## Licencia
+## Security
+
+Scanning with **Trivy** on every push (`.github/workflows/trivy.yml`): vulnerabilities,
+secrets and misconfigurations.
+
+## License
 
 [MIT](LICENSE)

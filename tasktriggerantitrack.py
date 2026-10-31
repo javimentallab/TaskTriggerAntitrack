@@ -34,6 +34,19 @@ import traceback
 import subprocess
 from datetime import datetime, timedelta
 
+import unicodedata
+from tta_lang import _  # interface texts in the user's language
+
+# Width (in characters) of the form's label column: the longest label of the language.
+def _text_cols(t):
+    """Columns a text takes: Chinese, Japanese and Korean characters are twice as wide."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in t)
+
+
+LABEL_W = max(_text_cols(_(t)) for t in ("Nombre", "Hora", "Desde", "Filtro (título/proceso)", "Texto a enviar",
+                                  "Teclas previas", "Programa", "Archivo / URL", "Argumentos",
+                                  "Carpeta de trabajo", "Mensaje del aviso")) + 1
+
 import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 
@@ -226,7 +239,7 @@ if sys.platform == "win32":
                 time.sleep(0.05)
             _type_text(text)
             time.sleep(0.12)
-            for _ in range(max(0, int(enters))):
+            for _i in range(max(0, int(enters))):
                 _tap(VK_RETURN)
                 time.sleep(0.05)
             time.sleep(0.25)
@@ -280,7 +293,7 @@ else:  # Linux / otros: xdotool
                 subprocess.call(["xdotool", "key", "--", key])
                 time.sleep(0.05)
             subprocess.call(["xdotool", "type", "--", text])
-            for _ in range(max(0, int(enters))):
+            for _i in range(max(0, int(enters))):
                 subprocess.call(["xdotool", "key", "Return"])
             time.sleep(0.2)
         return len(wins)
@@ -403,7 +416,7 @@ class Tooltip:
         widget.bind("<FocusIn>", self._show, add="+")
         widget.bind("<FocusOut>", self._hide, add="+")
 
-    def _show(self, _=None):
+    def _show(self, _event=None):
         if self.tip or not self.text:
             return
         x = self.widget.winfo_rootx() + 12
@@ -414,7 +427,7 @@ class Tooltip:
         tk.Label(tw, text=self.text, bg="#2a2a3a", fg="#e6e6f0", bd=1, relief="solid",
                  font=("Segoe UI", 9), padx=7, pady=4, wraplength=340, justify="left").pack()
 
-    def _hide(self, _=None):
+    def _hide(self, _event=None):
         if self.tip:
             self.tip.destroy()
             self.tip = None
@@ -479,7 +492,7 @@ class _TimePopup:
 
         bar = tk.Frame(wrap, bg="#1c1c26")
         bar.pack(fill="x", pady=(0, 10), padx=14)
-        tk.Button(bar, text="Cancelar", command=self._close, bd=0, bg="#2a2a38", fg="#e6e6f0",
+        tk.Button(bar, text=_("Cancelar"), command=self._close, bd=0, bg="#2a2a38", fg="#e6e6f0",
                   activebackground="#333345", padx=10, pady=4, cursor="hand2").pack(side="right")
         tk.Button(bar, text="OK", command=self._ok, bd=0, bg="#7aa2ff", fg="#0b0b12",
                   activebackground="#9cb8ff", padx=18, pady=4, font=("Segoe UI", 10, "bold"),
@@ -631,26 +644,26 @@ class App:
     # ---- construccion de la ventana ------------------------------
     def _build_ui(self):
         ttk.Label(self.root, text="TaskTriggerAntitrack", style="H.TLabel").pack(anchor="w", padx=18, pady=(14, 0))
-        ttk.Label(self.root, text="Programador de tareas · terminales y alarmas",
+        ttk.Label(self.root, text=_("Programador de tareas · terminales y alarmas"),
                   background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18)
 
         card = ttk.Frame(self.root, style="Card.TFrame", padding=14)
         card.pack(fill="x", padx=14, pady=12)
 
         # nombre
-        self.name = self._row_entry(card, "Nombre", 0, "continua")
+        self.name = self._row_entry(card, _("Nombre"), 0, "continua")
 
         # modo de hora
         self.time_mode = tk.StringVar(value="fixed")
         mr = ttk.Frame(card, style="Card.TFrame")
         mr.grid(row=1, column=0, columnspan=3, sticky="w", pady=(8, 2))
-        self._seg_radio(mr, "Hora fija", "fixed", self.time_mode).pack(side="left", padx=(0, 8))
-        self._seg_radio(mr, "Aleatoria en rango", "random", self.time_mode).pack(side="left")
+        self._seg_radio(mr, _("Hora fija"), "fixed", self.time_mode).pack(side="left", padx=(0, 8))
+        self._seg_radio(mr, _("Aleatoria en rango"), "random", self.time_mode).pack(side="left")
 
         # hora fija
         self.fixed_row = ttk.Frame(card, style="Card.TFrame")
         self.fixed_row.grid(row=2, column=0, columnspan=3, sticky="w", pady=2)
-        ttk.Label(self.fixed_row, text="Hora", style="Card.TLabel", width=14).pack(side="left")
+        ttk.Label(self.fixed_row, text=_("Hora"), style="Card.TLabel", width=LABEL_W).pack(side="left")
         self.t = TimeField(self.fixed_row, 5, 0)
         self.t.btn.pack(side="left")
 
@@ -659,18 +672,18 @@ class App:
         self.rand_row.grid(row=3, column=0, columnspan=3, sticky="w", pady=2)
         _rsub = ttk.Frame(self.rand_row, style="Card.TFrame")
         _rsub.pack(anchor="w")
-        ttk.Label(_rsub, text="Desde", style="Card.TLabel", width=14).pack(side="left")
+        ttk.Label(_rsub, text=_("Desde"), style="Card.TLabel", width=LABEL_W).pack(side="left")
         self.s = TimeField(_rsub, 0, 0)
         self.s.btn.pack(side="left")
-        ttk.Label(_rsub, text="  hasta  ", style="Card.TLabel").pack(side="left")
+        ttk.Label(_rsub, text="  " + _("hasta") + "  ", style="Card.TLabel").pack(side="left")
         self.e = TimeField(_rsub, 8, 0)
         self.e.btn.pack(side="left")
         ttk.Label(self.rand_row,
-                  text="(i) La hora exacta es impredecible dentro del rango → antitrazabilidad.",
+                  text=_("(i) La hora exacta es impredecible dentro del rango → antitrazabilidad."),
                   style="Mut.TLabel").pack(anchor="w", pady=(3, 0))
 
         self.daily = tk.BooleanVar(value=True)
-        self._toggle_check(card, "Repetir cada día", self.daily).grid(
+        self._toggle_check(card, _("Repetir cada día"), self.daily).grid(
             row=4, column=0, columnspan=3, sticky="w", pady=(8, 8))
 
         ttk.Separator(card, orient="horizontal").grid(row=5, column=0, columnspan=3, sticky="ew", pady=6)
@@ -679,44 +692,44 @@ class App:
         self.action = tk.StringVar(value="terminal")
         ar = ttk.Frame(card, style="Card.TFrame")
         ar.grid(row=6, column=0, columnspan=3, sticky="w")
-        self._seg_radio(ar, "Escribir en terminales", "terminal", self.action).pack(side="left", padx=(0, 8))
-        self._seg_radio(ar, "Ejecutar programa / abrir", "program", self.action).pack(side="left")
+        self._seg_radio(ar, _("Escribir en terminales"), "terminal", self.action).pack(side="left", padx=(0, 8))
+        self._seg_radio(ar, _("Ejecutar programa / abrir"), "program", self.action).pack(side="left")
 
         # accion terminal
         self.term_box = ttk.Frame(card, style="Card.TFrame")
         self.term_box.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(6, 0))
-        self.filt = self._row_entry(self.term_box, "Filtro (título/proceso)", 0, "WindowsTerminal")
-        self.text = self._row_entry(self.term_box, "Texto a enviar", 1, "continua")
-        self.prekeys = self._row_entry(self.term_box, "Teclas previas", 2, "")
+        self.filt = self._row_entry(self.term_box, _("Filtro (título/proceso)"), 0, "WindowsTerminal")
+        self.text = self._row_entry(self.term_box, _("Texto a enviar"), 1, "continua")
+        self.prekeys = self._row_entry(self.term_box, _("Teclas previas"), 2, "")
         tr = ttk.Frame(self.term_box, style="Card.TFrame")
         tr.grid(row=3, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        ttk.Label(tr, text="Ventanas:", style="Card.TLabel").pack(side="left", padx=(0, 6))
+        ttk.Label(tr, text=_("Ventanas:"), style="Card.TLabel").pack(side="left", padx=(0, 6))
         self.targets = tk.StringVar(value="all")
-        for txt, val in (("Todas", "all"), ("Primera", "first"), ("Foco", "focused")):
+        for txt, val in ((_("Todas"), "all"), (_("Primera"), "first"), (_("Foco"), "focused")):
             self._seg_radio(tr, txt, val, self.targets).pack(side="left", padx=(0, 6))
-        ttk.Label(tr, text="   Pulsar Enter:", style="Card.TLabel").pack(side="left")
+        ttk.Label(tr, text="   " + _("Pulsar Enter:"), style="Card.TLabel").pack(side="left")
         self.enters = ttk.Combobox(tr, width=3, state="readonly", values=[0, 1, 2, 3, 4, 5])
         self.enters.set(1)
         self.enters.pack(side="left", padx=(4, 0))
-        ttk.Label(self.term_box, text="Casa por TÍTULO o por PROCESO (p. ej. 'WindowsTerminal'); teclea el texto + Enter.",
+        ttk.Label(self.term_box, text=_("Casa por TÍTULO o por PROCESO (p. ej. 'WindowsTerminal'); teclea el texto + Enter."),
                   style="Mut.TLabel").grid(row=4, column=0, columnspan=3, sticky="w", pady=(4, 0))
 
         # accion programa
         self.prog_box = ttk.Frame(card, style="Card.TFrame")
         self.prog_box.grid(row=8, column=0, columnspan=3, sticky="ew", pady=(6, 0))
-        self.program = self._row_entry(self.prog_box, "Programa", 0, "",
+        self.program = self._row_entry(self.prog_box, _("Programa"), 0, "",
                                        browse=lambda: self._pick(self.program))
-        self.file_url = self._row_entry(self.prog_box, "Archivo / URL", 1, "",
+        self.file_url = self._row_entry(self.prog_box, _("Archivo / URL"), 1, "",
                                         browse=lambda: self._pick(self.file_url))
-        self.args = self._row_entry(self.prog_box, "Argumentos", 2, "")
-        self.workdir = self._row_entry(self.prog_box, "Carpeta de trabajo", 3, "",
+        self.args = self._row_entry(self.prog_box, _("Argumentos"), 2, "")
+        self.workdir = self._row_entry(self.prog_box, _("Carpeta de trabajo"), 3, "",
                                        browse=lambda: self._pickdir(self.workdir))
         wr = ttk.Frame(self.prog_box, style="Card.TFrame")
         wr.grid(row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
-        ttk.Label(wr, text="Modo ventana:", style="Card.TLabel").pack(side="left", padx=(0, 6))
+        ttk.Label(wr, text=_("Modo ventana:"), style="Card.TLabel").pack(side="left", padx=(0, 6))
         self.winmode = ttk.Combobox(wr, width=12, state="readonly",
-                                    values=["normal", "minimizado", "oculto", "elevado"])
-        self.winmode.set("normal")
+                                    values=list(self._WINMODE_TO_UI.values()))
+        self.winmode.set(_("normal"))
         self.winmode.pack(side="left")
 
         # extras
@@ -724,32 +737,32 @@ class App:
         ex.grid(row=9, column=0, columnspan=3, sticky="w", pady=(10, 2))
         self.snd = tk.BooleanVar(value=False)
         self.pop = tk.BooleanVar(value=False)
-        self._toggle_check(ex, "Sonido", self.snd).pack(side="left", padx=(0, 8))
-        self._toggle_check(ex, "Aviso emergente", self.pop).pack(side="left")
-        self.msg = self._row_entry(card, "Mensaje del aviso", 10, "")
+        self._toggle_check(ex, _("Sonido"), self.snd).pack(side="left", padx=(0, 8))
+        self._toggle_check(ex, _("Aviso emergente"), self.pop).pack(side="left")
+        self.msg = self._row_entry(card, _("Mensaje del aviso"), 10, "")
 
         # botones de accion sobre el formulario
         br = ttk.Frame(card, style="Card.TFrame")
         br.grid(row=11, column=0, columnspan=3, sticky="ew", pady=(12, 0))
-        ttk.Button(br, text="Guardar tarea", style="Accent.TButton", command=self.save_task).pack(side="left")
-        ttk.Button(br, text="Limpiar", style="Ghost.TButton", command=self.clear).pack(side="left", padx=8)
-        ttk.Button(br, text="Probar ahora", style="Ghost.TButton", command=self.test_now).pack(side="left")
+        ttk.Button(br, text=_("Guardar tarea"), style="Accent.TButton", command=self.save_task).pack(side="left")
+        ttk.Button(br, text=_("Limpiar"), style="Ghost.TButton", command=self.clear).pack(side="left", padx=8)
+        ttk.Button(br, text=_("Probar ahora"), style="Ghost.TButton", command=self.test_now).pack(side="left")
 
         card.grid_columnconfigure(1, weight=1)
 
         # ayuda contextual
-        Tooltip(self.filt, "Parte del TÍTULO o del nombre del PROCESO de las ventanas. Ej.: 'WindowsTerminal'.")
-        Tooltip(self.text, "Lo que se teclea en cada ventana, seguido de Enter.")
-        Tooltip(self.prekeys, "Teclas antes del texto. Ej.: esc  o  ctrl+c  (separa varias con espacio).")
-        Tooltip(self.program, "Programa a ejecutar. Args/Archivo/URL se le pasan como argumentos.")
-        Tooltip(self.file_url, "Archivo o URL. Sin programa, se abre con la app por defecto.")
-        Tooltip(self.args, "Argumentos extra, estilo línea de comandos (se respetan las comillas).")
-        Tooltip(self.workdir, "Carpeta desde la que se lanza el programa.")
+        Tooltip(self.filt, _("Parte del TÍTULO o del nombre del PROCESO de las ventanas. Ej.: 'WindowsTerminal'."))
+        Tooltip(self.text, _("Lo que se teclea en cada ventana, seguido de Enter."))
+        Tooltip(self.prekeys, _("Teclas antes del texto. Ej.: esc  o  ctrl+c  (separa varias con espacio)."))
+        Tooltip(self.program, _("Programa a ejecutar. Args/Archivo/URL se le pasan como argumentos."))
+        Tooltip(self.file_url, _("Archivo o URL. Sin programa, se abre con la app por defecto."))
+        Tooltip(self.args, _("Argumentos extra, estilo línea de comandos (se respetan las comillas)."))
+        Tooltip(self.workdir, _("Carpeta desde la que se lanza el programa."))
 
         # lista
         lf = ttk.Frame(self.root, style="TFrame")
         lf.pack(fill="both", expand=True, padx=14, pady=(0, 10))
-        ttk.Label(lf, text="Tareas programadas", background=BG, foreground=MUT).pack(anchor="w")
+        ttk.Label(lf, text=_("Tareas programadas"), background=BG, foreground=MUT).pack(anchor="w")
         inner = tk.Frame(lf, bg=CARD)
         inner.pack(fill="both", expand=True, pady=(4, 0))
         self.lb = tk.Listbox(inner, bg=CARD, fg=FG, selectbackground=ACC, selectforeground="#0b0b12",
@@ -764,13 +777,13 @@ class App:
 
         row = ttk.Frame(self.root, style="TFrame")
         row.pack(fill="x", padx=14, pady=(0, 12))
-        ttk.Button(row, text="Editar", style="Accent.TButton", command=self.edit_selected).pack(side="left", padx=(0, 8))
-        self.btn_toggle = tk.Button(row, text="Activar / pausar", command=self.toggle,
+        ttk.Button(row, text=_("Editar"), style="Accent.TButton", command=self.edit_selected).pack(side="left", padx=(0, 8))
+        self.btn_toggle = tk.Button(row, text=_("Activar / pausar"), command=self.toggle,
                                     bd=0, padx=16, pady=7, font=("Segoe UI", 10, "bold"),
                                     cursor="hand2", bg="#2a2a38", fg=FG, activebackground="#33334a",
                                     disabledforeground=MUT)
         self.btn_toggle.pack(side="left")
-        ttk.Button(row, text="Eliminar", style="Danger.TButton", command=self.delete).pack(side="left", padx=8)
+        ttk.Button(row, text=_("Eliminar"), style="Danger.TButton", command=self.delete).pack(side="left", padx=8)
         self.status = ttk.Label(row, text="", background=BG, foreground=FG, font=("Segoe UI", 10))
         self.status.pack(side="right")
 
@@ -780,7 +793,7 @@ class App:
         self.root.bind_all("<Control-t>", lambda e: self.test_now())
         self.root.bind_all("<Escape>", lambda e: self.clear())
         self.lb.bind("<Delete>", lambda e: self.delete())
-        ttk.Label(self.root, text="Atajos:  Ctrl+S guardar · Ctrl+T probar · Esc limpiar · Supr eliminar",
+        ttk.Label(self.root, text=_("Atajos:  Ctrl+S guardar · Ctrl+T probar · Esc limpiar · Supr eliminar"),
                   background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18, pady=(0, 8))
 
         self._sync_mode()
@@ -788,13 +801,13 @@ class App:
 
     # ---- helpers de widgets --------------------------------------
     def _row_entry(self, parent, label, r, default="", browse=None):
-        ttk.Label(parent, text=label, style="Card.TLabel", width=16).grid(row=r, column=0, sticky="w", pady=3)
+        ttk.Label(parent, text=label, style="Card.TLabel", width=LABEL_W).grid(row=r, column=0, sticky="w", pady=3)
         e = ttk.Entry(parent)
         e.insert(0, default)
         e.grid(row=r, column=1, sticky="ew", pady=3)
         parent.grid_columnconfigure(1, weight=1)
         if browse:
-            ttk.Button(parent, text="Examinar…", style="Ghost.TButton", command=browse).grid(
+            ttk.Button(parent, text=_("Examinar…"), style="Ghost.TButton", command=browse).grid(
                 row=r, column=2, padx=(8, 0), sticky="ew")
         return e
 
@@ -810,8 +823,8 @@ class App:
             entry.delete(0, tk.END)
             entry.insert(0, p)
 
-    _WINMODE_TO_UI = {"normal": "normal", "min": "minimizado", "hidden": "oculto", "elevated": "elevado"}
-    _WINMODE_FROM_UI = {"normal": "normal", "minimizado": "min", "oculto": "hidden", "elevado": "elevated"}
+    _WINMODE_TO_UI = {"normal": _("normal"), "min": _("minimizado"), "hidden": _("oculto"), "elevated": _("elevado")}
+    _WINMODE_FROM_UI = {v: k for k, v in _WINMODE_TO_UI.items()}
 
     # botones segmentados grandes (radios y checks tipo botón)
     _SEG = dict(indicatoron=False, bd=0, padx=16, pady=8, font=("Segoe UI", 11),
@@ -869,7 +882,7 @@ class App:
             sh, sm = _hm(a["start_time"])
             eh, em = _hm(a["end_time"])
             if (sh, sm) == (eh, em):
-                messagebox.showerror("Rango inválido", "El rango 'desde/hasta' no puede ser el mismo minuto.")
+                messagebox.showerror(_("Rango inválido"), _("El rango 'desde/hasta' no puede ser el mismo minuto."))
                 return None
         a["next_fire"] = compute_next(a).strftime(ISO)
         return a
@@ -910,7 +923,7 @@ class App:
         self.selected = None
         self.refresh()
         self.save()
-        self._flash("Tarea guardada.")
+        self._flash(_("Tarea guardada."))
 
     def clear(self):
         for e in (self.name, self.filt, self.text, self.prekeys,
@@ -918,25 +931,25 @@ class App:
             e.delete(0, tk.END)
         self.enters.set(1)
         self.targets.set("all")
-        self.winmode.set("normal")
+        self.winmode.set(_("normal"))
         self.selected = None
         self._update_toggle_btn()
 
     def delete(self):
         if self.selected is None:
-            self._flash("Selecciona una tarea de la lista primero.")
+            self._flash(_("Selecciona una tarea de la lista primero."))
             return
-        name = self.alarms[self.selected].get("name", "tarea")
+        name = self.alarms[self.selected].get("name", _("tarea"))
         del self.alarms[self.selected]
         self.selected = None
         self.clear()
         self.refresh()
         self.save()
-        self._flash("Tarea '%s' eliminada." % name)
+        self._flash(_("Tarea '%s' eliminada.") % name)
 
     def toggle(self):
         if self.selected is None:
-            self._flash("Selecciona una tarea de la lista primero.")
+            self._flash(_("Selecciona una tarea de la lista primero."))
             return
         a = self.alarms[self.selected]
         a["enabled"] = not a.get("enabled", True)
@@ -949,21 +962,21 @@ class App:
         self.lb.selection_set(self.selected)
         self.lb.see(self.selected)
         self._update_toggle_btn()
-        self._flash("Tarea '%s' %s." % (a.get("name", "tarea"),
-                                        "ACTIVADA" if a["enabled"] else "PAUSADA"))
+        self._flash(_("Tarea '%s' %s.") % (a.get("name", _("tarea")),
+                                        _("ACTIVADA") if a["enabled"] else _("PAUSADA")))
 
     def _update_toggle_btn(self):
         if self.selected is None:
-            self.btn_toggle.config(text="Activar / pausar", state="disabled",
+            self.btn_toggle.config(text=_("Activar / pausar"), state="disabled",
                                    bg="#2a2a38", fg=MUT)
             return
         enabled = self.alarms[self.selected].get("enabled", True)
         self.btn_toggle.config(state="normal")
         if enabled:   # está activa -> botón rojo para PAUSAR
-            self.btn_toggle.config(text="⏸  Pausar", bg="#c04646", fg="#ffffff",
+            self.btn_toggle.config(text=_("⏸  Pausar"), bg="#c04646", fg="#ffffff",
                                    activebackground="#d85a5a")
         else:         # está pausada -> botón verde para ACTIVAR
-            self.btn_toggle.config(text="▶  Activar", bg="#2f9e55", fg="#ffffff",
+            self.btn_toggle.config(text=_("▶  Activar"), bg="#2f9e55", fg="#ffffff",
                                    activebackground="#3cb766")
 
     def on_select(self, _):
@@ -978,12 +991,12 @@ class App:
         sel = self.lb.curselection()
         idx = sel[0] if sel else self.selected
         if idx is None or idx >= len(self.alarms):
-            self._flash("Selecciona una tarea de la lista para editar.")
+            self._flash(_("Selecciona una tarea de la lista para editar."))
             return
         self._fill(self.alarms[idx])
         self.selected = idx
         self._update_toggle_btn()
-        self._flash("Editando '%s': cambia y pulsa «Guardar tarea»." %
+        self._flash(_("Editando '%s': cambia y pulsa «Guardar tarea».") %
                     self.alarms[idx].get("name", "tarea"))
 
     def test_now(self):
@@ -1044,11 +1057,11 @@ class App:
                 self.alarms = []
                 dest = self._backup_bad_file("alarms.json ilegible: %s" % e)
                 # el mensaje se monta YA: `e` deja de existir al salir del except
-                msg = ("No he podido leer alarms.json:\n%s\n\n" % e +
-                       ("Lo he copiado a:\n%s\n\n" % dest if dest else "") +
-                       "La lista está vacía, pero el fichero NO se ha tocado. Si guardas o "
-                       "creas una tarea, se reescribirá: arréglalo antes o recupera la copia.")
-                self.root.after(300, lambda: messagebox.showwarning("Tareas sin cargar", msg))
+                msg = (_("No he podido leer alarms.json:\n%s\n\n") % e +
+                       (_("Lo he copiado a:\n%s\n\n") % dest if dest else "") +
+                       _("La lista está vacía, pero el fichero NO se ha tocado. Si guardas o creas una tarea, "
+                         "se reescribirá: arréglalo antes o recupera la copia."))
+                self.root.after(300, lambda: messagebox.showwarning(_("Tareas sin cargar"), msg))
             else:
                 self.alarms = [a for a in data if isinstance(a, dict)]
                 if len(self.alarms) != len(data):    # entradas basura: se quitan, con copia
@@ -1131,15 +1144,15 @@ class App:
                                           a.get("prekeys", ""), a.get("enters", 1),
                                           a.get("targets", "all"))
                     self.ui_queue.put(lambda: self._flash(
-                        ("PRUEBA: " if test else "") + "enviado a %d ventana(s)" % n))
+                        (_("PRUEBA: ") if test else "") + _("enviado a %d ventana(s)") % n))
                 else:
                     run_program(a.get("program", ""), a.get("file_url", ""),
                                 a.get("args", ""), a.get("workdir", ""), a.get("winmode", "normal"))
                     self.ui_queue.put(lambda: self._flash(
-                        ("PRUEBA: " if test else "") + "programa lanzado"))
+                        (_("PRUEBA: ") if test else "") + _("programa lanzado")))
                 if a.get("popup"):
                     _name = a.get("name", "TaskTriggerAntitrack")
-                    _msg = a.get("message") or ("Tarea «%s» disparada." % _name)
+                    _msg = a.get("message") or (_("Tarea «%s» disparada.") % _name)
                     self.ui_queue.put(lambda: self._show_alert(_name, _msg))
             except Exception:
                 log_error("fire", traceback.format_exc())
@@ -1216,7 +1229,7 @@ if __name__ == "__main__":
     def _accept_loop():
         while True:
             try:
-                conn, _ = _lock.accept()
+                conn, _addr = _lock.accept()
                 conn.close()
             except OSError:
                 break
