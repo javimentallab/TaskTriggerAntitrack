@@ -1,80 +1,81 @@
 # REPORT — TaskTriggerAntitrack
 
-Informe técnico de la fusión de **Alarma** + **Continua terminales** en una sola
-aplicación de escritorio.
+[Versión en español](REPORT.es.md)
 
-## 1. Origen
+Technical report on merging **Alarm** and **Resume terminals** into a single desktop
+application.
 
-| Herramienta | Stack | Qué hacía |
-|-------------|-------|-----------|
-| **Alarma** (`proyecto_alarma 1.2`) | Python + tkinter + pygame | Lista de alarmas con hora de inicio/fin; elegía una **hora de disparo aleatoria** dentro del rango; al saltar reproducía un `.wav`, mostraba un aviso y **ejecutaba un programa** o abría un archivo/URL. |
-| **Continua terminales** | PowerShell + WPF | A una **hora fija**, enfocaba todas las ventanas que casaban un filtro de título y tecleaba un texto + **Enter** (reanudar Claude al reset de uso). |
+## 1. Origin
 
-## 2. Modelo fusionado
+| Tool | Stack | What it did |
+|------|-------|-------------|
+| **Alarm** (`proyecto_alarma 1.2`) | Python + tkinter + pygame | A list of alarms with a start and end time; it picked a **random firing time** inside the range; when it fired it played a `.wav`, showed a pop-up and **ran a program** or opened a file/URL. |
+| **Resume terminals** | PowerShell + WPF | At a **fixed time**, it focused every window matching a title filter and typed a text + **Enter** (to resume Claude when the usage limit resets). |
 
-Se unifican en un **programador de tareas** donde cada entrada cruza dos ejes
-independientes:
+## 2. Merged model
 
-- **Cuándo** — `fixed` (hora `HH:MM`) o `random` (instante al azar en `[desde, hasta]`),
-  con `daily` para reprogramarse cada día.
-- **Qué** — `terminal` (teclear texto + Enter en ventanas que casen un filtro) o
-  `program` (ejecutar programa / abrir archivo o URL).
-- **Extras** — `sound` y `popup` (aviso con mensaje).
+They become a single **task scheduler** where each entry combines two independent axes:
 
-Resultado: continua-terminales **gana** la hora aleatoria y Alarma **gana** la acción de
-escribir en terminales. Cualquier combinación es válida (p. ej. abrir una URL a una hora
-aleatoria, o teclear `continua` en las terminales a hora fija).
+- **When** — `fixed` (time `HH:MM`) or `random` (a random moment in `[from, to]`), with
+  `daily` to reschedule it every day.
+- **What** — `terminal` (type text + Enter into windows matching a filter) or `program`
+  (run a program / open a file or URL).
+- **Extras** — `sound` and `popup` (a pop-up with a message).
 
-## 3. Intervalo aleatorio: antitrazabilidad
+The result: Resume terminals **gains** the random time and Alarm **gains** typing into
+terminals. Any combination is valid (for example, opening a URL at a random time, or
+typing `continua` into the terminals at a fixed time).
 
-El disparo a hora aleatoria dentro de un rango es una función de **antitrazabilidad**,
-no un mero adorno:
+## 3. Random interval: anti-tracking
 
-- Una tarea que abre siempre una web o lanza un programa a la **misma hora exacta** crea
-  un **patrón horario predecible**. Un observador (del tráfico de red o del sistema) puede
-  anticipar *cuándo* ocurrirá la conexión y **correlacionarla** con el usuario.
-- Al **aleatorizar** la hora dentro de una ventana amplia, el instante concreto deja de
-  ser predecible en cada ejecución: desaparece la **firma horaria** y se rompe la
-  correlación "hora conocida → web/programa concreto".
-- Con *Repetir cada día*, el azar se **recalcula** en cada jornada, de modo que el patrón
-  tampoco se estabiliza entre días.
+Firing at a random time within a range is an **anti-tracking** feature, not a mere
+embellishment:
 
-Implementación: `compute_next()` toma la ventana `[inicio, fin]` del día (soportando
-ventanas que cruzan medianoche), descarta la parte ya pasada, y elige
-`inicio + random(0, segundos_restantes)`.
+- A task that always opens a website or runs a program at **exactly the same time** creates
+  a **predictable schedule**. An observer (of the network traffic or the system) can
+  anticipate *when* the connection will happen and **link** it to the user.
+- By **randomising** the time within a wide window, the exact moment is no longer predictable
+  on each run: the **time signature** disappears and the link "known time → specific website
+  or program" is broken.
+- With *Repeat every day*, the random time is **drawn again** every day, so the pattern does
+  not settle from one day to the next either.
 
-## 4. Decisiones técnicas
+Implementation: `compute_next()` takes the day's `[start, end]` window (windows that cross
+midnight are supported), discards the part already gone, and picks
+`start + random(0, remaining_seconds)`.
 
-- **Base Python/tkinter** (la de Alarma) por ser multiplataforma; era un deseo previo del
-  proyecto Alarma (portar a Linux, menos dependencias y archivos).
-- **Cero dependencias pip.** Se eliminó `pygame`: el sonido usa `winsound` (Windows),
-  `afplay` (macOS) o `aplay`/`paplay` (Linux).
-- **Tecleo en ventanas sin librerías externas:**
-  - *Windows*: `ctypes` sobre `user32`/`kernel32`. Enumeración con `EnumWindows`, enfoque
-    real con el truco `AttachThreadInput` + `SetForegroundWindow` (salta el bloqueo de foco
-    de Windows), y tecleo con `SendInput` usando `KEYEVENTF_UNICODE` (texto literal, sin
-    mapas de teclado) + `VK_RETURN`.
+## 4. Technical decisions
+
+- **Python/tkinter base** (Alarm's) because it is cross-platform; porting to Linux with fewer
+  dependencies and files was already a goal of the Alarm project.
+- **No pip dependencies.** `pygame` was removed: the sound uses `winsound` (Windows), `afplay`
+  (macOS) or `aplay`/`paplay` (Linux).
+- **Typing into windows without external libraries:**
+  - *Windows*: `ctypes` over `user32`/`kernel32`. Enumeration with `EnumWindows`, real focus
+    with the `AttachThreadInput` + `SetForegroundWindow` trick (it gets past Windows' focus
+    lock), and typing with `SendInput` using `KEYEVENTF_UNICODE` (literal text, no keyboard
+    maps) + `VK_RETURN`.
   - *Linux (X11)*: `xdotool search --name` + `windowactivate` + `type` + `key Return`.
-- **Disparo en hilo aparte.** La acción (sonido + tecleo/programa) corre en un
-  `threading.Thread` para no congelar la interfaz; el aviso emergente se muestra **después**
-  del tecleo para no robar el foco a las terminales.
-- **Persistencia** en `alarms.json` con el próximo disparo (`next_fire`) ya calculado;
-  al arrancar se recalculan los disparos cuya hora ya pasó.
+- **Firing in a separate thread.** The action (sound + typing/program) runs in a
+  `threading.Thread` so the interface does not freeze; the pop-up is shown **after** the
+  typing so it does not steal focus from the terminals.
+- **Persistence** in `alarms.json` with the next firing (`next_fire`) already computed; on
+  startup, firings whose time has passed are recalculated.
 
-## 5. Limitaciones conocidas
+## 5. Known limitations
 
-- La ventana debe permanecer **abierta** para disparar (no es un servicio). Para disparo
-  persistente, crear una Tarea Programada (Windows) o un `.timer`/cron (Linux) que lance
-  el script.
-- En **Wayland**, el tecleo en ventanas ajenas puede estar restringido por el compositor.
-- El tecleo Unicode omite caracteres fuera del BMP (irrelevante para comandos típicos).
+- The window has to stay **open** to fire (it is not a service). For persistent firing, create
+  a Scheduled Task (Windows) or a `.timer`/cron job (Linux) that launches the script.
+- On **Wayland**, typing into other apps' windows may be restricted by the compositor.
+- Unicode typing skips characters outside the BMP (irrelevant for typical commands).
 
-## 6. Estructura
+## 6. Structure
 
 ```
-tasktriggerantitrack.py     aplicación (GUI + scheduler + acciones)
-tasktriggerantitrack.cmd    lanzador sin consola (Windows)
-alarm_sound.wav             sonido de disparo
-icon.ico                    icono (reloj + flechas de azar)
-alarms.json                 tareas guardadas (no versionado)
+tasktriggerantitrack.py     application (GUI + scheduler + actions)
+tta_lang.py                 interface texts in 15 languages
+tasktriggerantitrack.cmd    launcher without a console (Windows)
+alarm_sound.wav             firing sound
+icon.ico                    icon (clock + random arrows)
+alarms.json                 saved tasks (not versioned)
 ```
