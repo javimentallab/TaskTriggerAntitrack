@@ -117,6 +117,10 @@ configuración personal), igual que `error.log`.
 Escaneo con **Trivy** en cada push (`.github/workflows/trivy.yml`): vulnerabilidades,
 secretos y malas configuraciones.
 
+## Contribuir
+
+Consulta [CONTRIBUTING](CONTRIBUTING.md), en inglés. Para avisar en privado de un problema de seguridad, consulta [SECURITY](SECURITY.md).
+
 ## Licencia
 
 [MIT](LICENSE)

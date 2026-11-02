@@ -118,6 +118,10 @@ personal setup), and neither is `error.log`.
 Scanning with **Trivy** on every push (`.github/workflows/trivy.yml`): vulnerabilities,
 secrets and misconfigurations.
 
+## Contributing
+
+See [CONTRIBUTING](CONTRIBUTING.md). To report a security problem privately, see [SECURITY](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)
