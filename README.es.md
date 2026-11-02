@@ -82,6 +82,8 @@ En Windows también puedes hacer doble clic en `tasktriggerantitrack.cmd` (abre 
 En la lista: `●` activa / `⏸` pausada · `✎` terminal / `▷` programa · `↻` repite a diario ·
 `next HH:MM:SS` el próximo disparo (o `next DD/MM HH:MM` si no es hoy). Selecciona una tarea para editarla, pausarla o eliminarla.
 
+Atajos: `Ctrl+S` guardar · `Ctrl+T` probar · `Esc` limpiar · `Supr` eliminar.
+
 ### Arranque y fiabilidad
 
 - **Instancia única**: si ya está abierta, lanzarla otra vez solo trae al frente la
@@ -89,8 +91,10 @@ En la lista: `●` activa / `⏸` pausada · `✎` terminal / `▷` programa · 
 - **Autoarranque**: con `--min` arranca minimizada; pensado para un acceso directo en
   la carpeta de Inicio de Windows (`shell:startup`) o en el autostart del escritorio.
 - Las tareas se guardan de forma **atómica** (no se corrompen si se corta a mitad) y
-  una tarea con datos inválidos se desactiva en vez de impedir el arranque. Cualquier
-  fallo queda en `error.log` (con `pythonw` no hay consola).
+  una tarea con datos inválidos se desactiva en vez de impedir el arranque. Un
+  `alarms.json` ilegible se copia aparte (`alarms.json.corrupto-<fecha>`) con un aviso, y no
+  se toca hasta que guardes una tarea. Cualquier fallo queda en `error.log` (con `pythonw`
+  no hay consola).
 
 ## Idiomas
 
@@ -115,7 +119,7 @@ configuración personal), igual que `error.log`.
 ## Seguridad
 
 Escaneo con **Trivy** en cada push (`.github/workflows/trivy.yml`): vulnerabilidades,
-secretos y malas configuraciones.
+secretos y malas configuraciones. **CodeQL** analiza el código y los tests también corren en cada push.
 
 ## Contribuir
 

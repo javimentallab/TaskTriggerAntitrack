@@ -83,6 +83,8 @@ In the list: `●` active / `⏸` paused · `✎` terminal / `▷` program · `�
 `next HH:MM:SS` the next firing (or `next DD/MM HH:MM` if not today). Select a task to
 edit, pause or delete it.
 
+Shortcuts: `Ctrl+S` save · `Ctrl+T` test · `Esc` clear · `Del` delete.
+
 ### Startup and reliability
 
 - **Single instance**: if it is already open, launching it again just brings the
@@ -90,8 +92,10 @@ edit, pause or delete it.
 - **Autostart**: `--min` starts it minimised; meant for a shortcut in the Windows
   Startup folder (`shell:startup`) or in the desktop's autostart.
 - Tasks are saved **atomically** (they are not corrupted if interrupted halfway) and a
-  task with invalid data is disabled instead of stopping the app from starting. Any
-  failure goes to `error.log` (with `pythonw` there is no console).
+  task with invalid data is disabled instead of stopping the app from starting. An
+  unreadable `alarms.json` is copied aside (`alarms.json.corrupto-<date>`) with a warning,
+  and is not touched until you save a task. Any failure goes to `error.log` (with
+  `pythonw` there is no console).
 
 ## Languages
 
@@ -116,7 +120,7 @@ personal setup), and neither is `error.log`.
 ## Security
 
 Scanning with **Trivy** on every push (`.github/workflows/trivy.yml`): vulnerabilities,
-secrets and misconfigurations.
+secrets and misconfigurations. **CodeQL** analyses the code and the tests run on every push too.
 
 ## Contributing
 
