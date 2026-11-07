@@ -70,7 +70,14 @@ apertura de un servicio a una hora impredecible dentro de una ventana amplia.
 
 ## Uso
 
+Clónala con git o descarga el zip de la
+[última versión](https://github.com/javimentallab/TaskTriggerAntitrack/releases/latest) y
+descomprímelo. Las dos copias se pueden actualizar después con el botón **Buscar
+actualizaciones**. Luego arráncala desde su carpeta:
+
 ```bash
+git clone https://github.com/javimentallab/TaskTriggerAntitrack.git
+cd TaskTriggerAntitrack
 python tasktriggerantitrack.py
 ```
 

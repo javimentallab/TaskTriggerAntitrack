@@ -69,7 +69,14 @@ open at an unpredictable time within a wide window.
 
 ## Usage
 
+Clone it with git, or download the zip of the
+[latest release](https://github.com/javimentallab/TaskTriggerAntitrack/releases/latest) and unpack
+it. Either copy can be updated later with the **Check for updates** button. Then start it from its
+folder:
+
 ```bash
+git clone https://github.com/javimentallab/TaskTriggerAntitrack.git
+cd TaskTriggerAntitrack
 python tasktriggerantitrack.py
 ```
 
