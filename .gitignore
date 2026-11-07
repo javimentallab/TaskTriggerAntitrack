@@ -5,3 +5,6 @@ err.txt
 out.txt
 error.log
 alarms.json.corrupto-*
+.tta-backup-*/
+.tta-update-*/
+.tta-probe-*

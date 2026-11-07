@@ -47,6 +47,30 @@ SOURCE = [
     "se reescribirá: arréglalo antes o recupera la copia.",                             # 64
     "Tareas sin cargar", "PRUEBA: ", "enviado a %d ventana(s)", "programa lanzado",     # 65-68
     "Tarea «%s» disparada.",                                                            # 69
+    # the update button
+    "Actualizar",  # 70
+    "Buscando…",  # 71
+    "Descargando…",  # 72
+    "Mira en GitHub si hay versión nueva. Solo se conecta cuando lo pulsas.",  # 73
+    "Tienes la última versión (%s).",  # 74
+    "Hay una versión nueva: %s (tienes la %s).",  # 75
+    "¿La descargo y la instalo? Tus tareas no se tocan y guardo una copia de la versión actual.",  # 76
+    "¿La descargo? No la instalo sola porque %s. La guardo en Descargas y abro la página de la versión.",  # 77
+    "esta carpeta es un repositorio git: actualízala con «git pull»",  # 78
+    "no puedo escribir en la carpeta de la app",  # 79
+    "Esta versión no publica su suma SHA-256: solo puedo comprobar que el fichero viene de GitHub.",  # 80
+    "Versión %s instalada. Cierra la app y vuelve a abrirla para usarla.\n\nCopia de la anterior en:\n%s",  # 81
+    "Versión %s guardada en:\n%s",  # 82
+    "No he podido buscar la versión nueva:\n%s",  # 83
+    "No he podido actualizar:\n%s",  # 84
+    "sin conexión o GitHub no responde",  # 85
+    "GitHub tarda demasiado en responder",  # 86
+    "GitHub responde con el error %s",  # 87
+    "la respuesta de GitHub no es la esperada",  # 88
+    "el fichero descargado no coincide con su suma SHA-256",  # 89
+    "el fichero descargado no es una versión válida de la app",  # 90
+    "el fichero es demasiado grande",  # 91
+    "no he podido escribir los ficheros nuevos; la versión actual sigue como estaba",  # 92
 ]
 
 LANGS = {}
@@ -122,6 +146,29 @@ LANGS["en"] = """
 67|sent to %d window(s)
 68|program started
 69|Task “%s” fired.
+70|Update
+71|Checking…
+72|Downloading…
+73|Checks GitHub for a new version. It only connects when you press it.
+74|You have the latest version (%s).
+75|A new version is available: %s (you have %s).
+76|Download and install it? Your tasks are not touched, and a copy of the current version is kept.
+77|Download it? It will not be installed automatically because %s. It will be saved in Downloads and the release page will open.
+78|this folder is a git repository: update it with 'git pull'
+79|the app's folder cannot be written to
+80|This version does not publish its SHA-256 checksum: the only possible check is that the file comes from GitHub.
+81|Version %s installed. Close the app and open it again to use it.\\n\\nCopy of the previous version in:\\n%s
+82|Version %s saved in:\\n%s
+83|Could not check for a new version:\\n%s
+84|Could not update:\\n%s
+85|no connection, or GitHub is not responding
+86|GitHub is taking too long to respond
+87|GitHub returned error %s
+88|GitHub's answer was not as expected
+89|the downloaded file does not match its SHA-256 checksum
+90|the downloaded file is not a valid version of the app
+91|the file is too large
+92|the new files could not be written; the current version is unchanged
 """
 
 LANGS["pt"] = """
@@ -195,6 +242,29 @@ LANGS["pt"] = """
 67|enviado a %d janela(s)
 68|programa iniciado
 69|Tarefa “%s” disparada.
+70|Atualizar
+71|Verificando…
+72|Baixando…
+73|Verifica no GitHub se há uma versão nova. Só se conecta quando você clica.
+74|Você tem a versão mais recente (%s).
+75|Há uma versão nova: %s (você tem a %s).
+76|Baixar e instalar? Suas tarefas não são alteradas e guardo uma cópia da versão atual.
+77|Baixar? Não a instalo automaticamente porque %s. Vou salvá-la em Downloads e abrir a página da versão.
+78|esta pasta é um repositório git: atualize-a com “git pull”
+79|não consigo gravar na pasta do app
+80|Esta versão não publica sua soma SHA-256: só consigo verificar que o arquivo vem do GitHub.
+81|Versão %s instalada. Feche o app e abra de novo para usá-la.\\n\\nCópia da anterior em:\\n%s
+82|Versão %s salva em:\\n%s
+83|Não consegui verificar se há versão nova:\\n%s
+84|Não consegui atualizar:\\n%s
+85|sem conexão ou o GitHub não responde
+86|o GitHub está demorando demais para responder
+87|o GitHub respondeu com o erro %s
+88|a resposta do GitHub não é a esperada
+89|o arquivo baixado não confere com sua soma SHA-256
+90|o arquivo baixado não é uma versão válida do app
+91|o arquivo é grande demais
+92|não consegui gravar os arquivos novos; a versão atual continua como estava
 """
 
 LANGS["fr"] = """
@@ -268,6 +338,29 @@ LANGS["fr"] = """
 67|envoyé à %d fenêtre(s)
 68|programme lancé
 69|Tâche « %s » déclenchée.
+70|Mettre à jour
+71|Recherche…
+72|Téléchargement…
+73|Cherche sur GitHub une nouvelle version. Ne se connecte que lorsque vous cliquez.
+74|Vous avez la dernière version (%s).
+75|Une nouvelle version est disponible : %s (vous avez la %s).
+76|La télécharger et l’installer ? Vos tâches ne sont pas modifiées et une copie de la version actuelle est conservée.
+77|La télécharger ? Elle ne sera pas installée automatiquement, car %s. Elle sera enregistrée dans Téléchargements et la page de la version s’ouvrira.
+78|ce dossier est un dépôt git : mettez-le à jour avec « git pull »
+79|le dossier de l’application n’est pas accessible en écriture
+80|Cette version ne publie pas sa somme SHA-256 : on peut seulement vérifier que le fichier vient de GitHub.
+81|Version %s installée. Fermez l’application et rouvrez-la pour l’utiliser.\\n\\nCopie de la précédente dans :\\n%s
+82|Version %s enregistrée dans :\\n%s
+83|Impossible de chercher une nouvelle version :\\n%s
+84|Impossible de mettre à jour :\\n%s
+85|pas de connexion, ou GitHub ne répond pas
+86|GitHub met trop de temps à répondre
+87|GitHub a renvoyé l’erreur %s
+88|la réponse de GitHub n’est pas celle attendue
+89|le fichier téléchargé ne correspond pas à sa somme SHA-256
+90|le fichier téléchargé n’est pas une version valide de l’application
+91|le fichier est trop volumineux
+92|impossible d’écrire les nouveaux fichiers ; la version actuelle est inchangée
 """
 
 LANGS["de"] = """
@@ -341,6 +434,29 @@ LANGS["de"] = """
 67|an %d Fenster gesendet
 68|Programm gestartet
 69|Aufgabe „%s“ ausgelöst.
+70|Aktualisieren
+71|Suche…
+72|Herunterladen…
+73|Sucht auf GitHub nach einer neuen Version. Verbindet sich nur, wenn du klickst.
+74|Du hast die neueste Version (%s).
+75|Es gibt eine neue Version: %s (du hast %s).
+76|Herunterladen und installieren? Deine Aufgaben bleiben unberührt, und die aktuelle Version wird gesichert.
+77|Herunterladen? Sie wird nicht selbst installiert, weil %s. Sie wird unter Downloads gespeichert, und die Seite der Version öffnet sich.
+78|dieser Ordner ein Git-Repository ist (aktualisiere ihn mit „git pull“)
+79|der Ordner der App nicht beschreibbar ist
+80|Diese Version veröffentlicht keine SHA-256-Prüfsumme: Es lässt sich nur prüfen, dass die Datei von GitHub kommt.
+81|Version %s installiert. Schließe die App und öffne sie neu, um sie zu nutzen.\\n\\nKopie der vorherigen unter:\\n%s
+82|Version %s gespeichert unter:\\n%s
+83|Konnte nicht nach einer neuen Version suchen:\\n%s
+84|Aktualisierung fehlgeschlagen:\\n%s
+85|keine Verbindung, oder GitHub antwortet nicht
+86|GitHub braucht zu lange für die Antwort
+87|GitHub meldet den Fehler %s
+88|die Antwort von GitHub ist nicht wie erwartet
+89|die heruntergeladene Datei passt nicht zu ihrer SHA-256-Prüfsumme
+90|die heruntergeladene Datei ist keine gültige Version der App
+91|die Datei ist zu groß
+92|die neuen Dateien konnten nicht geschrieben werden; die aktuelle Version ist unverändert
 """
 
 LANGS["it"] = """
@@ -414,6 +530,29 @@ LANGS["it"] = """
 67|inviato a %d finestra/e
 68|programma avviato
 69|Attività “%s” eseguita.
+70|Aggiorna
+71|Ricerca…
+72|Scaricamento…
+73|Cerca su GitHub una nuova versione. Si collega solo quando lo premi.
+74|Hai l’ultima versione (%s).
+75|C’è una nuova versione: %s (hai la %s).
+76|La scarico e la installo? Le tue attività non vengono toccate e conservo una copia della versione attuale.
+77|La scarico? Non la installo automaticamente perché %s. La salvo in Download e apro la pagina della versione.
+78|questa cartella è un repository git: aggiornala con «git pull»
+79|non posso scrivere nella cartella dell’app
+80|Questa versione non pubblica la sua somma SHA-256: posso solo verificare che il file arrivi da GitHub.
+81|Versione %s installata. Chiudi l’app e riaprila per usarla.\\n\\nCopia della precedente in:\\n%s
+82|Versione %s salvata in:\\n%s
+83|Non sono riuscito a cercare la nuova versione:\\n%s
+84|Non sono riuscito ad aggiornare:\\n%s
+85|nessuna connessione, o GitHub non risponde
+86|GitHub ci mette troppo a rispondere
+87|GitHub risponde con l’errore %s
+88|la risposta di GitHub non è quella attesa
+89|il file scaricato non corrisponde alla sua somma SHA-256
+90|il file scaricato non è una versione valida dell’app
+91|il file è troppo grande
+92|non sono riuscito a scrivere i nuovi file; la versione attuale è rimasta com’era
 """
 
 LANGS["nl"] = """
@@ -487,6 +626,29 @@ LANGS["nl"] = """
 67|verzonden naar %d venster(s)
 68|programma gestart
 69|Taak ‘%s’ uitgevoerd.
+70|Bijwerken
+71|Zoeken…
+72|Downloaden…
+73|Kijkt op GitHub of er een nieuwe versie is. Maakt alleen verbinding als je erop klikt.
+74|Je hebt de nieuwste versie (%s).
+75|Er is een nieuwe versie: %s (je hebt %s).
+76|Downloaden en installeren? Je taken blijven onaangeroerd en er wordt een kopie van de huidige versie bewaard.
+77|Downloaden? Ze wordt niet vanzelf geïnstalleerd, omdat %s. Ze wordt in Downloads opgeslagen en de pagina van de versie wordt geopend.
+78|deze map een git-repository is (werk hem bij met ‘git pull’)
+79|de map van de app niet beschrijfbaar is
+80|Deze versie publiceert geen SHA-256-controlesom: er kan alleen worden gecontroleerd dat het bestand van GitHub komt.
+81|Versie %s geïnstalleerd. Sluit de app en open hem opnieuw om hem te gebruiken.\\n\\nKopie van de vorige in:\\n%s
+82|Versie %s opgeslagen in:\\n%s
+83|Kon niet zoeken naar een nieuwe versie:\\n%s
+84|Kon niet bijwerken:\\n%s
+85|geen verbinding, of GitHub reageert niet
+86|GitHub doet er te lang over om te reageren
+87|GitHub geeft fout %s
+88|het antwoord van GitHub is niet zoals verwacht
+89|het gedownloade bestand komt niet overeen met de SHA-256-controlesom
+90|het gedownloade bestand is geen geldige versie van de app
+91|het bestand is te groot
+92|de nieuwe bestanden konden niet worden geschreven; de huidige versie is ongewijzigd
 """
 
 LANGS["pl"] = """
@@ -560,6 +722,29 @@ LANGS["pl"] = """
 67|wysłano do okien: %d
 68|program uruchomiony
 69|Zadanie „%s” uruchomione.
+70|Aktualizuj
+71|Sprawdzam…
+72|Pobieram…
+73|Sprawdza na GitHubie, czy jest nowa wersja. Łączy się tylko po kliknięciu.
+74|Masz najnowszą wersję (%s).
+75|Jest nowa wersja: %s (masz %s).
+76|Pobrać i zainstalować? Twoje zadania pozostaną nietknięte, a kopia obecnej wersji zostanie zachowana.
+77|Pobrać? Nie zainstaluję jej sam, bo %s. Zapiszę ją w folderze Pobrane i otworzę stronę wersji.
+78|ten folder jest repozytorium git: zaktualizuj go poleceniem „git pull”
+79|nie mogę zapisywać w folderze aplikacji
+80|Ta wersja nie publikuje swojej sumy SHA-256: mogę tylko sprawdzić, czy plik pochodzi z GitHuba.
+81|Zainstalowano wersję %s. Zamknij aplikację i otwórz ją ponownie, aby z niej korzystać.\\n\\nKopia poprzedniej w:\\n%s
+82|Wersję %s zapisano w:\\n%s
+83|Nie mogłem sprawdzić, czy jest nowa wersja:\\n%s
+84|Nie mogłem zaktualizować:\\n%s
+85|brak połączenia albo GitHub nie odpowiada
+86|GitHub odpowiada zbyt długo
+87|GitHub zwrócił błąd %s
+88|odpowiedź GitHuba jest inna niż oczekiwana
+89|pobrany plik nie zgadza się ze swoją sumą SHA-256
+90|pobrany plik nie jest prawidłową wersją aplikacji
+91|plik jest za duży
+92|nie mogłem zapisać nowych plików; obecna wersja pozostała bez zmian
 """
 
 LANGS["ru"] = """
@@ -633,6 +818,29 @@ LANGS["ru"] = """
 67|отправлено в окон: %d
 68|программа запущена
 69|Задача «%s» сработала.
+70|Обновить
+71|Проверка…
+72|Скачивание…
+73|Проверяет на GitHub, есть ли новая версия. Подключается, только когда вы нажимаете.
+74|У вас последняя версия (%s).
+75|Есть новая версия: %s (у вас %s).
+76|Скачать и установить? Ваши задачи не затрагиваются, а копия текущей версии сохраняется.
+77|Скачать? Автоматически она не установится, потому что %s. Файл будет сохранён в папке «Загрузки», и откроется страница версии.
+78|эта папка — git-репозиторий: обновите её командой «git pull»
+79|нет права записи в папку приложения
+80|Эта версия не публикует свою сумму SHA-256: можно проверить только то, что файл получен с GitHub.
+81|Версия %s установлена. Закройте приложение и откройте его снова, чтобы ею пользоваться.\\n\\nКопия предыдущей версии в:\\n%s
+82|Версия %s сохранена в:\\n%s
+83|Не удалось проверить наличие новой версии:\\n%s
+84|Не удалось обновить:\\n%s
+85|нет соединения или GitHub не отвечает
+86|GitHub слишком долго не отвечает
+87|GitHub вернул ошибку %s
+88|ответ GitHub не такой, как ожидалось
+89|скачанный файл не совпадает со своей суммой SHA-256
+90|скачанный файл не является корректной версией приложения
+91|файл слишком большой
+92|не удалось записать новые файлы; текущая версия осталась без изменений
 """
 
 LANGS["uk"] = """
@@ -706,6 +914,29 @@ LANGS["uk"] = """
 67|надіслано у вікон: %d
 68|програму запущено
 69|Завдання «%s» спрацювало.
+70|Оновити
+71|Перевірка…
+72|Завантаження…
+73|Перевіряє на GitHub, чи є нова версія. Підключається, лише коли ви натискаєте.
+74|У вас остання версія (%s).
+75|Є нова версія: %s (у вас %s).
+76|Завантажити й установити? Ваші завдання не змінюються, а копія поточної версії зберігається.
+77|Завантажити? Автоматично вона не встановиться, бо %s. Файл буде збережено в папці «Завантаження», і відкриється сторінка версії.
+78|ця папка — git-репозиторій: оновіть її командою «git pull»
+79|немає права запису в папку застосунку
+80|Ця версія не публікує своєї суми SHA-256: можна перевірити лише те, що файл отримано з GitHub.
+81|Версію %s установлено. Закрийте застосунок і відкрийте його знову, щоб нею користуватися.\\n\\nКопія попередньої версії в:\\n%s
+82|Версію %s збережено в:\\n%s
+83|Не вдалося перевірити, чи є нова версія:\\n%s
+84|Не вдалося оновити:\\n%s
+85|немає з’єднання або GitHub не відповідає
+86|GitHub надто довго не відповідає
+87|GitHub повернув помилку %s
+88|відповідь GitHub не така, як очікувалося
+89|завантажений файл не збігається зі своєю сумою SHA-256
+90|завантажений файл не є правильною версією застосунку
+91|файл завеликий
+92|не вдалося записати нові файли; поточна версія залишилася без змін
 """
 
 LANGS["zh"] = """
@@ -779,6 +1010,29 @@ LANGS["zh"] = """
 67|已发送到 %d 个窗口
 68|程序已启动
 69|任务“%s”已触发。
+70|更新
+71|正在检查…
+72|正在下载…
+73|在 GitHub 上检查是否有新版本。只有点击时才会联网。
+74|已是最新版本（%s）。
+75|有新版本：%s（当前为 %s）。
+76|下载并安装吗？你的任务不会被改动，并会保留当前版本的副本。
+77|下载吗？由于%s，不会自动安装。文件会保存到“下载”文件夹，并打开该版本的页面。
+78|此文件夹是 git 仓库（请用“git pull”更新）
+79|无法写入应用所在的文件夹
+80|此版本没有公布 SHA-256 校验值：只能确认文件来自 GitHub。
+81|版本 %s 已安装。请关闭应用后重新打开，即可使用。\\n\\n旧版本的副本位于：\\n%s
+82|版本 %s 已保存到：\\n%s
+83|无法检查新版本：\\n%s
+84|无法更新：\\n%s
+85|没有网络连接，或 GitHub 没有响应
+86|GitHub 响应时间过长
+87|GitHub 返回错误 %s
+88|GitHub 的响应不符合预期
+89|下载的文件与其 SHA-256 校验值不符
+90|下载的文件不是有效的应用版本
+91|文件过大
+92|无法写入新文件；当前版本保持不变
 """
 
 LANGS["ja"] = """
@@ -852,6 +1106,29 @@ LANGS["ja"] = """
 67|%d 個のウィンドウに送信
 68|プログラムを起動しました
 69|タスク「%s」を実行しました。
+70|更新
+71|確認中…
+72|ダウンロード中…
+73|GitHub で新しいバージョンがあるか確認します。押したときだけ接続します。
+74|最新バージョンです（%s）。
+75|新しいバージョンがあります：%s（現在は %s）。
+76|ダウンロードしてインストールしますか？タスクはそのままで、現在のバージョンのコピーを残します。
+77|ダウンロードしますか？%sため、自動ではインストールしません。「ダウンロード」フォルダーに保存し、バージョンのページを開きます。
+78|このフォルダーが git リポジトリである（「git pull」で更新してください）
+79|アプリのフォルダーに書き込めない
+80|このバージョンは SHA-256 チェックサムを公開していません。ファイルが GitHub から来たことしか確認できません。
+81|バージョン %s をインストールしました。使うにはアプリを閉じて開き直してください。\\n\\n以前のバージョンのコピー：\\n%s
+82|バージョン %s の保存先：\\n%s
+83|新しいバージョンを確認できませんでした：\\n%s
+84|更新できませんでした：\\n%s
+85|接続できないか、GitHub が応答しません
+86|GitHub の応答に時間がかかりすぎています
+87|GitHub がエラー %s を返しました
+88|GitHub の応答が想定と違います
+89|ダウンロードしたファイルが SHA-256 チェックサムと一致しません
+90|ダウンロードしたファイルはアプリの有効なバージョンではありません
+91|ファイルが大きすぎます
+92|新しいファイルを書き込めませんでした。現在のバージョンはそのままです
 """
 
 LANGS["ko"] = """
@@ -925,6 +1202,29 @@ LANGS["ko"] = """
 67|창 %d개에 보냄
 68|프로그램을 실행함
 69|‘%s’ 작업이 실행되었습니다.
+70|업데이트
+71|확인 중…
+72|다운로드 중…
+73|GitHub에서 새 버전이 있는지 확인합니다. 누를 때만 연결합니다.
+74|최신 버전입니다(%s).
+75|새 버전이 있습니다: %s(현재 %s).
+76|다운로드해서 설치할까요? 작업은 그대로 두고 현재 버전의 사본을 보관합니다.
+77|다운로드할까요? %s 자동으로 설치하지 않습니다. ‘다운로드’ 폴더에 저장하고 버전 페이지를 엽니다.
+78|이 폴더가 git 저장소이므로(‘git pull’로 업데이트하세요)
+79|앱 폴더에 쓸 수 없으므로
+80|이 버전은 SHA-256 체크섬을 공개하지 않습니다. 파일이 GitHub에서 왔는지만 확인할 수 있습니다.
+81|버전 %s을(를) 설치했습니다. 사용하려면 앱을 닫고 다시 여세요.\\n\\n이전 버전의 사본 위치:\\n%s
+82|버전 %s 저장 위치:\\n%s
+83|새 버전을 확인하지 못했습니다:\\n%s
+84|업데이트하지 못했습니다:\\n%s
+85|연결이 없거나 GitHub가 응답하지 않습니다
+86|GitHub 응답이 너무 오래 걸립니다
+87|GitHub가 오류 %s을(를) 반환했습니다
+88|GitHub 응답이 예상과 다릅니다
+89|다운로드한 파일이 SHA-256 체크섬과 일치하지 않습니다
+90|다운로드한 파일이 올바른 앱 버전이 아닙니다
+91|파일이 너무 큽니다
+92|새 파일을 쓰지 못했습니다. 현재 버전은 그대로입니다
 """
 
 LANGS["th"] = """
@@ -998,6 +1298,29 @@ LANGS["th"] = """
 67|ส่งไปยัง %d หน้าต่าง
 68|เรียกใช้โปรแกรมแล้ว
 69|งาน “%s” ทำงานแล้ว
+70|อัปเดต
+71|กำลังตรวจสอบ…
+72|กำลังดาวน์โหลด…
+73|ตรวจสอบบน GitHub ว่ามีเวอร์ชันใหม่หรือไม่ จะเชื่อมต่อเฉพาะตอนที่คุณกดเท่านั้น
+74|คุณมีเวอร์ชันล่าสุดแล้ว (%s)
+75|มีเวอร์ชันใหม่: %s (ของคุณคือ %s)
+76|ดาวน์โหลดและติดตั้งไหม? งานของคุณจะไม่ถูกแตะต้อง และจะเก็บสำเนาของเวอร์ชันปัจจุบันไว้
+77|ดาวน์โหลดไหม? จะไม่ติดตั้งให้เองเพราะ%s จะบันทึกไว้ในโฟลเดอร์ “ดาวน์โหลด” และเปิดหน้าของเวอร์ชันนั้น
+78|โฟลเดอร์นี้เป็นที่เก็บ git (อัปเดตด้วย “git pull”)
+79|เขียนลงโฟลเดอร์ของแอปไม่ได้
+80|เวอร์ชันนี้ไม่ได้เผยแพร่ค่า SHA-256: ตรวจสอบได้เพียงว่าไฟล์มาจาก GitHub
+81|ติดตั้งเวอร์ชัน %s แล้ว ปิดแอปแล้วเปิดใหม่เพื่อใช้งาน\\n\\nสำเนาของเวอร์ชันก่อนหน้าอยู่ที่:\\n%s
+82|บันทึกเวอร์ชัน %s ไว้ที่:\\n%s
+83|ตรวจหาเวอร์ชันใหม่ไม่ได้:\\n%s
+84|อัปเดตไม่ได้:\\n%s
+85|ไม่มีการเชื่อมต่อ หรือ GitHub ไม่ตอบสนอง
+86|GitHub ใช้เวลาตอบสนองนานเกินไป
+87|GitHub ตอบกลับด้วยข้อผิดพลาด %s
+88|คำตอบจาก GitHub ไม่เป็นไปตามที่คาดไว้
+89|ไฟล์ที่ดาวน์โหลดไม่ตรงกับค่า SHA-256
+90|ไฟล์ที่ดาวน์โหลดไม่ใช่เวอร์ชันที่ถูกต้องของแอป
+91|ไฟล์ใหญ่เกินไป
+92|เขียนไฟล์ใหม่ไม่ได้ เวอร์ชันปัจจุบันยังเหมือนเดิม
 """
 
 LANGS["hi"] = """
@@ -1071,6 +1394,29 @@ LANGS["hi"] = """
 67|%d विंडो में भेजा गया
 68|प्रोग्राम शुरू हुआ
 69|टास्क “%s” चल गया।
+70|अपडेट करें
+71|जाँच हो रही है…
+72|डाउनलोड हो रहा है…
+73|GitHub पर देखता है कि नया वर्ज़न है या नहीं। सिर्फ़ दबाने पर ही कनेक्ट होता है।
+74|आपके पास सबसे नया वर्ज़न है (%s)।
+75|नया वर्ज़न उपलब्ध है: %s (आपके पास %s है)।
+76|डाउनलोड करके इंस्टॉल करें? आपके टास्क नहीं बदलेंगे, और मौजूदा वर्ज़न की कॉपी रखी जाएगी।
+77|डाउनलोड करें? यह अपने-आप इंस्टॉल नहीं होगा, क्योंकि %s। इसे “डाउनलोड” फ़ोल्डर में सेव किया जाएगा और वर्ज़न का पेज खुलेगा।
+78|यह फ़ोल्डर एक git रिपॉज़िटरी है (इसे “git pull” से अपडेट करें)
+79|ऐप के फ़ोल्डर में लिखा नहीं जा सकता
+80|यह वर्ज़न अपना SHA-256 चेकसम प्रकाशित नहीं करता: सिर्फ़ यह जाँचा जा सकता है कि फ़ाइल GitHub से आई है।
+81|वर्ज़न %s इंस्टॉल हो गया। इस्तेमाल करने के लिए ऐप बंद करके फिर से खोलें।\\n\\nपिछले वर्ज़न की कॉपी यहाँ है:\\n%s
+82|वर्ज़न %s यहाँ सेव किया गया:\\n%s
+83|नए वर्ज़न की जाँच नहीं हो सकी:\\n%s
+84|अपडेट नहीं हो सका:\\n%s
+85|कनेक्शन नहीं है, या GitHub जवाब नहीं दे रहा
+86|GitHub जवाब देने में बहुत देर लगा रहा है
+87|GitHub ने त्रुटि %s लौटाई
+88|GitHub का जवाब उम्मीद के मुताबिक नहीं है
+89|डाउनलोड की गई फ़ाइल अपने SHA-256 चेकसम से मेल नहीं खाती
+90|डाउनलोड की गई फ़ाइल ऐप का सही वर्ज़न नहीं है
+91|फ़ाइल बहुत बड़ी है
+92|नई फ़ाइलें लिखी नहीं जा सकीं; मौजूदा वर्ज़न वैसा ही है
 """
 
 SUPPORTED = ["es"] + list(LANGS)

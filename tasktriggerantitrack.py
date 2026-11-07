@@ -31,13 +31,16 @@ import queue
 import shlex
 import random
 import shutil
+import tempfile
 import threading
 import traceback
 import subprocess
+import webbrowser
 from datetime import datetime, timedelta
 
 import unicodedata
 from tta_lang import _  # interface texts in the user's language
+import tta_update        # the update button: the app's only connection, and only when pressed
 
 # Width (in characters) of the form's label column: the longest label of the language.
 def _text_cols(t):
@@ -645,7 +648,15 @@ class App:
 
     # ---- construccion de la ventana ------------------------------
     def _build_ui(self):
-        ttk.Label(self.root, text="TaskTriggerAntitrack", style="H.TLabel").pack(anchor="w", padx=18, pady=(14, 0))
+        hdr = ttk.Frame(self.root, style="TFrame")
+        hdr.pack(fill="x", padx=(18, 14), pady=(14, 0))
+        ttk.Label(hdr, text="TaskTriggerAntitrack", style="H.TLabel").pack(side="left")
+        ttk.Label(hdr, text=__version__, background=BG, foreground=MUT,
+                  font=("Segoe UI", 9)).pack(side="left", padx=(8, 0), pady=(6, 0))
+        self.btn_update = ttk.Button(hdr, text=_("Actualizar"), style="Ghost.TButton",
+                                     command=self.check_update)
+        self.btn_update.pack(side="right")
+        Tooltip(self.btn_update, _("Mira en GitHub si hay versión nueva. Solo se conecta cuando lo pulsas."))
         ttk.Label(self.root, text=_("Programador de tareas · terminales y alarmas"),
                   background=BG, foreground=MUT, font=("Segoe UI", 9)).pack(anchor="w", padx=18)
 
@@ -1121,6 +1132,106 @@ class App:
                 pass
         except Exception:
             log_error("alert", traceback.format_exc())
+
+    # ---- actualizar -----------------------------------------------
+    # Solo al pulsar el botón: pregunta a GitHub por la última versión publicada,
+    # la descarga (con su SHA-256 si lo publica) y, si la carpeta lo permite, la instala
+    # encima guardando una copia de la actual. alarms.json, error.log y el sonido no se tocan.
+    _UPD_ERRORS = {
+        "network": "sin conexión o GitHub no responde",
+        "timeout": "GitHub tarda demasiado en responder",
+        "http": "GitHub responde con el error %s",
+        "bad_response": "la respuesta de GitHub no es la esperada",
+        "checksum": "el fichero descargado no coincide con su suma SHA-256",
+        "bad_archive": "el fichero descargado no es una versión válida de la app",
+        "too_big": "el fichero es demasiado grande",
+        "write": "no he podido escribir los ficheros nuevos; la versión actual sigue como estaba",
+    }
+    _UPD_WHY = {
+        "git": "esta carpeta es un repositorio git: actualízala con «git pull»",
+        "readonly": "no puedo escribir en la carpeta de la app",
+    }
+
+    def _upd_busy(self, text):
+        self.btn_update.config(text=text)
+        self.btn_update.state(["disabled"])
+
+    def _upd_idle(self):
+        self.btn_update.config(text=_("Actualizar"))
+        self.btn_update.state(["!disabled"])
+
+    def _upd_error(self, head, err):
+        self._upd_idle()
+        kind = getattr(err, "kind", "")
+        if kind in self._UPD_ERRORS:
+            why = _(self._UPD_ERRORS[kind])
+            if kind == "http":
+                why = why % err.detail
+        else:
+            why = str(err)
+        log_error("update", repr(err))
+        messagebox.showerror(_("Actualizar"), _(head) % why)
+
+    def _upd_thread(self, job, done, head):
+        """job() en un hilo; done(resultado) o el error, de vuelta en el hilo de la ventana."""
+        def work():
+            try:
+                res = job()
+            except Exception as e:
+                if not isinstance(e, tta_update.UpdateError):
+                    log_error("update", traceback.format_exc())
+                self.ui_queue.put(lambda e=e: self._upd_error(head, e))
+            else:
+                self.ui_queue.put(lambda: done(res))
+        threading.Thread(target=work, daemon=True).start()
+
+    def check_update(self):
+        self._upd_busy(_("Buscando…"))
+        self._upd_thread(lambda: tta_update.latest_release(__version__),
+                         self._upd_found, "No he podido buscar la versión nueva:\n%s")
+
+    def _upd_found(self, rel):
+        self._upd_idle()
+        if not tta_update.is_newer(rel.version, __version__):
+            messagebox.showinfo(_("Actualizar"), _("Tienes la última versión (%s).") % __version__)
+            return
+        why = tta_update.cannot_install_here(APP_DIR)
+        parts = [_("Hay una versión nueva: %s (tienes la %s).") % (rel.version, __version__)]
+        if why is None:
+            parts.append(_("¿La descargo y la instalo? Tus tareas no se tocan y guardo una copia "
+                           "de la versión actual."))
+        else:
+            parts.append(_("¿La descargo? No la instalo sola porque %s. La guardo en Descargas "
+                           "y abro la página de la versión.") % _(self._UPD_WHY[why]))
+        if not rel.sha256:
+            parts.append(_("Esta versión no publica su suma SHA-256: solo puedo comprobar que "
+                           "el fichero viene de GitHub."))
+        if not messagebox.askyesno(_("Actualizar"), "\n\n".join(parts)):
+            return
+        self._upd_busy(_("Descargando…"))
+        if why is None:
+            def job():
+                tmp = tempfile.mkdtemp(prefix="tta-update-")
+                try:
+                    return tta_update.install(tta_update.download(rel, tmp, __version__),
+                                              APP_DIR, __version__)
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
+
+            def done(backup):
+                self._upd_idle()
+                messagebox.showinfo(_("Actualizar"), _(
+                    "Versión %s instalada. Cierra la app y vuelve a abrirla para usarla.\n\n"
+                    "Copia de la anterior en:\n%s") % (rel.version, backup))
+        else:
+            def job():
+                return tta_update.download(rel, tta_update.downloads_dir(), __version__)
+
+            def done(path):
+                self._upd_idle()
+                webbrowser.open(rel.page)
+                messagebox.showinfo(_("Actualizar"), _("Versión %s guardada en:\n%s") % (rel.version, path))
+        self._upd_thread(job, done, "No he podido actualizar:\n%s")
 
     # ---- disparo --------------------------------------------------
     def _drain_ui(self):
