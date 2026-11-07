@@ -313,23 +313,144 @@ class Installing(unittest.TestCase):
         self.assertEqual(self.read("tta_lang.py"), self.OLD["tta_lang.py"])
         self.assertFalse(os.path.exists(os.path.join(self.app, "docs", "new.txt")))
 
-    def test_where_it_can_install(self):
-        self.assertIsNone(up.cannot_install_here(self.app))
+    def test_how_each_copy_is_updated(self):
+        self.assertEqual(up.install_plan(self.app), ("zip", None))
         with mock.patch.object(up.tempfile, "mkstemp", side_effect=PermissionError()):
-            self.assertEqual(up.cannot_install_here(self.app), "readonly")
-        os.mkdir(os.path.join(self.app, ".git"))
-        self.assertEqual(up.cannot_install_here(self.app), "git")
+            self.assertEqual(up.install_plan(self.app), ("download", "readonly"))
 
-    def test_git_worktree_counts_as_git(self):
-        with open(os.path.join(self.app, ".git"), "w") as f:
+    def test_a_broken_git_folder_is_not_updated(self):
+        with open(os.path.join(self.app, ".git"), "w") as f:     # a worktree pointing nowhere
             f.write("gitdir: elsewhere\n")
-        self.assertEqual(up.cannot_install_here(self.app), "git")
+        method, why = up.install_plan(self.app)
+        self.assertEqual(method, "git")
+        self.assertIn(why, ("not_git", "no_git"))
+
+    def test_without_git_installed(self):
+        os.mkdir(os.path.join(self.app, ".git"))
+        with mock.patch.object(up, "_git_exe", return_value=None):
+            self.assertEqual(up.install_plan(self.app), ("git", "no_git"))
+            with self.assertRaises(up.UpdateError) as cm:
+                up.git_update("v1.1.0", self.app)
+        self.assertEqual(cm.exception.kind, "no_git")
+
+
+# ---- updating a git clone (local repositories, no network) --------------------------
+GIT = shutil.which("git")
+GIT_CFG = ["-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false",
+           "-c", "tag.gpgsign=false", "-c", "core.autocrlf=false", "-c", "init.defaultBranch=main",
+           "-c", "core.hooksPath=" + os.devnull, "-c", "protocol.file.allow=always"]
+
+
+def git(cwd, *args):
+    import subprocess
+    r = subprocess.run([GIT] + GIT_CFG + list(args), cwd=cwd, capture_output=True, text=True, timeout=30)
+    if r.returncode:
+        raise AssertionError("git %s: %s" % (" ".join(args), r.stderr))
+    return r.stdout.strip()
+
+
+@unittest.skipUnless(GIT, "git is not installed")
+class GitClone(unittest.TestCase):
+    """An 'official' repository with v1.1.0 and v1.2.0, and a user's clone at v1.1.0."""
+
+    def setUp(self):
+        base = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, base, True)
+        self.official = os.path.join(base, "official")
+        self.app = os.path.join(base, "app")
+        self.other = os.path.join(base, "origin-elsewhere")
+        os.mkdir(self.official)
+        git(self.official, "init", "-q")
+        self.write(self.official, "tasktriggerantitrack.py", "VERSION = '1.1.0'\n")
+        self.write(self.official, ".gitignore", "alarms.json\nerror.log\n")
+        git(self.official, "add", ".")
+        git(self.official, "commit", "-q", "-m", "1.1.0")
+        git(self.official, "tag", "v1.1.0")
+        git(base, "clone", "-q", self.official, self.app)
+        git(base, "clone", "-q", "--bare", self.official, self.other)   # what origin points to
+        git(self.app, "remote", "set-url", "origin", self.other)
+        self.write(self.official, "tasktriggerantitrack.py", "VERSION = '1.2.0'\n")
+        git(self.official, "commit", "-q", "-am", "1.2.0")
+        git(self.official, "tag", "-a", "v1.2.0", "-m", "TaskTriggerAntitrack 1.2.0")
+        self.write(self.app, "alarms.json", '[{"name": "mine"}]')       # the user's tasks
+        self.start = self.head()
+
+    def write(self, folder, name, text):
+        with open(os.path.join(folder, name), "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+
+    def read(self, name):
+        with open(os.path.join(self.app, name), encoding="utf-8") as f:
+            return f.read()
+
+    def head(self):
+        return git(self.app, "rev-parse", "HEAD")
+
+    def update(self, tag="v1.2.0"):
+        return up.git_update(tag, self.app, repo_url=self.official)
+
+    def test_clean_clone_moves_to_the_release_of_the_official_repository(self):
+        self.assertEqual(up.install_plan(self.app), ("git", None))
+        new = self.update()
+        self.assertEqual(new, self.head())
+        self.assertEqual(new, git(self.official, "rev-parse", "v1.2.0^{commit}"))
+        self.assertEqual(self.read("tasktriggerantitrack.py"), "VERSION = '1.2.0'\n")
+        self.assertEqual(self.read("alarms.json"), '[{"name": "mine"}]')
+        # origin was not used: the bare copy it points to never had v1.2.0
+        self.assertNotIn("v1.2.0", git(self.other, "tag"))
+
+    def test_local_changes_are_left_alone(self):
+        self.write(self.app, "tasktriggerantitrack.py", "MINE = 1\n")
+        self.assertEqual(up.install_plan(self.app), ("git", "local_changes"))
+        with self.assertRaises(up.UpdateError) as cm:
+            self.update()
+        self.assertEqual(cm.exception.kind, "local_changes")
+        self.assertEqual((self.head(), self.read("tasktriggerantitrack.py")), (self.start, "MINE = 1\n"))
+
+    def test_commits_of_its_own_are_left_alone(self):
+        self.write(self.app, "notes.txt", "mine\n")
+        git(self.app, "add", "notes.txt")
+        git(self.app, "commit", "-q", "-m", "Mine")
+        mine = self.head()
+        with self.assertRaises(up.UpdateError) as cm:
+            self.update()
+        self.assertEqual(cm.exception.kind, "diverged")
+        self.assertEqual(self.head(), mine)
+        self.assertEqual(self.read("tasktriggerantitrack.py"), "VERSION = '1.1.0'\n")
+
+    def test_a_tag_that_does_not_exist_changes_nothing(self):
+        with self.assertRaises(up.UpdateError) as cm:
+            self.update("v9.9.9")
+        self.assertEqual(cm.exception.kind, "git")
+        self.assertEqual(self.head(), self.start)
+
+    def test_a_clone_that_already_has_the_release_is_not_moved(self):
+        self.update()
+        here = self.head()
+        self.assertEqual(self.update("v1.1.0"), git(self.official, "rev-parse", "v1.1.0^{commit}"))
+        self.assertEqual(self.head(), here)
+
+    def test_anything_that_is_not_a_version_is_refused(self):
+        for bad in ("main", "--upload-pack=evil", "v1.2.0;rm", ""):
+            with self.assertRaises(up.UpdateError) as cm:
+                self.update(bad)
+            self.assertEqual(cm.exception.kind, "bad_response", bad)
+        self.assertEqual(self.head(), self.start)
+
+    def test_a_folder_inside_a_clone_is_not_a_clone(self):
+        sub = os.path.join(self.app, "sub")
+        os.mkdir(sub)
+        os.mkdir(os.path.join(sub, ".git"))     # an empty .git folder: git sees the parent clone
+        self.assertEqual(up.install_plan(sub), ("git", "not_git"))
+
+    def test_the_official_repository_is_the_default(self):
+        self.assertEqual(up.REPO_GIT, "https://github.com/javimentallab/TaskTriggerAntitrack.git")
 
 
 # ---- texts -------------------------------------------------------------------------
 class Texts(unittest.TestCase):
     def test_every_update_text_is_translated(self):
-        used = list(tta.App._UPD_ERRORS.values()) + list(tta.App._UPD_WHY.values())
+        used = list(tta.App._UPD_ERRORS.values()) + list(tta.App._UPD_WHY.values()) + [tta.App.UPD_TITLE]
         with open(os.path.join(HERE, "tasktriggerantitrack.py"), encoding="utf-8") as f:
             tree = ast.parse(f.read())
         for node in ast.walk(tree):
@@ -340,6 +461,11 @@ class Texts(unittest.TestCase):
                 used.append(node.args[2].value)
         missing = [t for t in used if t not in tta_lang.SOURCE]
         self.assertEqual(missing, [])
+
+    def test_every_reason_and_error_has_a_text(self):
+        self.assertLessEqual({"no_git", "local_changes", "not_git", "diverged", "readonly"}, set(tta.App._UPD_WHY))
+        self.assertLessEqual({"network", "timeout", "http", "bad_response", "checksum", "bad_archive",
+                              "too_big", "write", "git"}, set(tta.App._UPD_ERRORS))
 
     def test_update_texts_fit_in_the_header(self):
         """Title, version and the button (in each of its three texts) fit in the narrowest window."""
@@ -357,7 +483,7 @@ class Texts(unittest.TestCase):
             btn = font.Font(root, family="Segoe UI", size=11)
             room = 580 - 18 - 14 - title - ver - 16          # window, margins and a gap
             for lang, table in tta_lang.TABLES.items():
-                for text in ("Actualizar", "Buscando…", "Descargando…"):
+                for text in (tta.App.UPD_TITLE, "Buscando…", "Descargando…"):
                     w = btn.measure(table[text]) + 2 * 12 + 4  # Ghost.TButton padding and border
                     self.assertLessEqual(w, room, (lang, table[text], w, room))
         finally:

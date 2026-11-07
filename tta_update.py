@@ -2,10 +2,11 @@
 Update check for TaskTriggerAntitrack (standard library only, no window).
 
 Nothing here runs on its own: the app calls it only when the user presses the update
-button. It asks GitHub for the latest release, compares the versions, downloads that
-release's archive (checking its SHA-256 when the release publishes one) and, when the
-folder allows it, installs it over the current files. The user's tasks (alarms.json),
-error.log and sound are never overwritten, and the replaced files are backed up first.
+button. It asks GitHub for the latest release and compares the versions. A clean git
+clone is moved to the release tag of the official repository (fast-forward only); any
+other copy gets that release's archive (checking its SHA-256 when the release publishes
+one), installed over the current files when the folder allows it. The user's tasks
+(alarms.json), error.log and sound are never overwritten, and replaced files are backed up.
 
 Only HTTPS to GitHub's own hosts is allowed, redirects included. The only thing sent is
 a generic User-Agent with the app's version.
@@ -18,6 +19,8 @@ import re
 import shutil
 import socket
 import ssl
+import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -46,7 +49,8 @@ Release = namedtuple("Release", "tag version page archive_url archive_name sha25
 
 
 class UpdateError(Exception):
-    """kind: network, timeout, http, bad_response, checksum, bad_archive, too_big, write."""
+    """kind: network, timeout, http, bad_response, checksum, bad_archive, too_big, write, git;
+    and why a git clone is not updated: no_git, local_changes, not_git, diverged."""
     def __init__(self, kind, detail=""):
         super().__init__("%s: %s" % (kind, detail) if detail else kind)
         self.kind = kind
@@ -261,17 +265,92 @@ def downloads_dir():
     return d if os.path.isdir(d) else tempfile.gettempdir()
 
 
-def cannot_install_here(app_dir):
-    """None if the app can replace its own files; otherwise 'git' or 'readonly'."""
+def install_plan(app_dir):
+    """How this copy can be updated, as (method, blocker):
+
+    ('git', None)      a clean git clone: fetch the release tag and fast-forward to it;
+    ('git', reason)    a git clone that cannot be updated safely (no_git, local_changes, not_git);
+    ('zip', None)      a folder it can write to: replace the files from the release archive;
+    ('download', 'readonly')  anything else: save the archive and open the release page.
+    """
     if os.path.exists(os.path.join(app_dir, ".git")):
-        return "git"                # a checkout: replacing files would leave it out of step
+        return "git", git_blocker(app_dir)   # replacing files would leave git out of step
     try:
         fd, probe = tempfile.mkstemp(prefix=".tta-probe-", dir=app_dir)
         os.close(fd)
         os.remove(probe)
     except OSError:
-        return "readonly"
+        return "download", "readonly"
+    return "zip", None
+
+
+# ---- updating a git clone ----------------------------------------------------------
+REPO_GIT = "https://github.com/%s.git" % REPO     # always the official one, not the clone's origin
+GIT_TIMEOUT = 60
+
+
+def _git_exe():
+    return shutil.which("git")
+
+
+def _git(root, *args, timeout=15, check=True):
+    exe = _git_exe()
+    if not exe:
+        raise UpdateError("no_git")
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", LC_ALL="C")
+    flags = 0x08000000 if sys.platform == "win32" else 0     # CREATE_NO_WINDOW under pythonw
+    try:
+        r = subprocess.run([exe, "-C", root] + list(args), env=env, stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout, creationflags=flags)
+    except subprocess.TimeoutExpired:
+        raise UpdateError("git", "no answer after %d s" % timeout)
+    except OSError as e:
+        raise UpdateError("git", e)
+    if check and r.returncode != 0:
+        lines = (r.stderr or r.stdout).strip().splitlines()
+        raise UpdateError("git", lines[-1] if lines else r.returncode)
+    return r
+
+
+def git_blocker(app_dir):
+    """None if this clone can be fast-forwarded safely; otherwise why not."""
+    if not _git_exe():
+        return "no_git"
+    same = lambda p: os.path.normcase(os.path.realpath(p))  # noqa: E731
+    try:
+        top = _git(app_dir, "rev-parse", "--show-toplevel").stdout.strip()
+        if not top or same(top) != same(app_dir):
+            return "not_git"
+        if _git(app_dir, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+            return "local_changes"
+    except UpdateError:
+        return "not_git"
     return None
+
+
+def git_update(tag, app_dir, repo_url=REPO_GIT):
+    """Moves the clone to `tag` of the official repository, fast-forward only. Returns the commit.
+
+    Nothing changes unless every check passes: a clean clone, the tag downloaded, and no
+    commits of its own. Git checks what it downloads by its hashes. The user's files
+    (alarms.json, error.log) are not tracked by git, so they are left alone.
+    """
+    if parse_version(tag) is None:          # also keeps it a safe refspec
+        raise UpdateError("bad_response", "tag %r" % (tag,))
+    blocker = git_blocker(app_dir)
+    if blocker:
+        raise UpdateError(blocker)
+    _git(app_dir, "fetch", "--no-tags", "--quiet", repo_url, "refs/tags/%s" % tag, timeout=GIT_TIMEOUT)
+    new = _git(app_dir, "rev-parse", "--verify", "--quiet", "FETCH_HEAD^{commit}").stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40,64}", new):
+        raise UpdateError("git", "the release tag was not downloaded")
+    if _git(app_dir, "merge-base", "--is-ancestor", new, "HEAD", check=False).returncode == 0:
+        return new                          # the clone already has it
+    if _git(app_dir, "merge-base", "--is-ancestor", "HEAD", new, check=False).returncode != 0:
+        raise UpdateError("diverged")       # commits of its own: no fast-forward possible
+    _git(app_dir, "merge", "--ff-only", "--quiet", new, timeout=GIT_TIMEOUT)
+    return new
 
 
 def _safe_member(rel):

@@ -653,7 +653,7 @@ class App:
         ttk.Label(hdr, text="TaskTriggerAntitrack", style="H.TLabel").pack(side="left")
         ttk.Label(hdr, text=__version__, background=BG, foreground=MUT,
                   font=("Segoe UI", 9)).pack(side="left", padx=(8, 0), pady=(6, 0))
-        self.btn_update = ttk.Button(hdr, text=_("Actualizar"), style="Ghost.TButton",
+        self.btn_update = ttk.Button(hdr, text=_(self.UPD_TITLE), style="Ghost.TButton",
                                      command=self.check_update)
         self.btn_update.pack(side="right")
         Tooltip(self.btn_update, _("Mira en GitHub si hay versión nueva. Solo se conecta cuando lo pulsas."))
@@ -1133,10 +1133,13 @@ class App:
         except Exception:
             log_error("alert", traceback.format_exc())
 
-    # ---- actualizar -----------------------------------------------
-    # Solo al pulsar el botón: pregunta a GitHub por la última versión publicada,
-    # la descarga (con su SHA-256 si lo publica) y, si la carpeta lo permite, la instala
-    # encima guardando una copia de la actual. alarms.json, error.log y el sonido no se tocan.
+    # ---- buscar actualizaciones -------------------------------------
+    # Solo al pulsar el botón: pregunta a GitHub por la última versión publicada. Un clon
+    # de git limpio avanza (solo fast-forward) hasta la etiqueta del repositorio oficial;
+    # cualquier otra copia descarga el zip (con su SHA-256 si lo publica) y, si la carpeta
+    # lo permite, lo instala encima guardando una copia. alarms.json, error.log y el sonido
+    # no se tocan.
+    UPD_TITLE = "Buscar actualizaciones"
     _UPD_ERRORS = {
         "network": "sin conexión o GitHub no responde",
         "timeout": "GitHub tarda demasiado en responder",
@@ -1146,9 +1149,13 @@ class App:
         "bad_archive": "el fichero descargado no es una versión válida de la app",
         "too_big": "el fichero es demasiado grande",
         "write": "no he podido escribir los ficheros nuevos; la versión actual sigue como estaba",
+        "git": "git ha fallado: %s",
     }
-    _UPD_WHY = {
-        "git": "esta carpeta es un repositorio git: actualízala con «git pull»",
+    _UPD_WHY = {                          # van dentro de «No la actualizo sola porque %s.»
+        "no_git": "esta copia es un clon de git, pero git no está instalado",
+        "local_changes": "hay cambios locales en esta copia",
+        "diverged": "esta copia tiene cambios propios guardados en git que no están en el repositorio oficial",
+        "not_git": "la carpeta .git de esta copia no es válida",
         "readonly": "no puedo escribir en la carpeta de la app",
     }
 
@@ -1157,22 +1164,33 @@ class App:
         self.btn_update.state(["disabled"])
 
     def _upd_idle(self):
-        self.btn_update.config(text=_("Actualizar"))
+        self.btn_update.config(text=_(self.UPD_TITLE))
         self.btn_update.state(["!disabled"])
 
-    def _upd_error(self, head, err):
+    def _upd_offer_page(self, rel, text):
+        """Explica por qué no se actualiza sola y ofrece abrir la página de la versión."""
+        if messagebox.askyesno(_(self.UPD_TITLE), text + "\n\n" + _("¿Abro la página de la versión?")):
+            webbrowser.open(rel.page)
+
+    def _upd_error(self, head, err, rel=None):
         self._upd_idle()
         kind = getattr(err, "kind", "")
+        log_error("update", repr(err))
+        if kind in self._UPD_WHY and rel is not None:
+            self._upd_offer_page(rel, _("No la actualizo sola porque %s.") % _(self._UPD_WHY[kind]))
+            return
         if kind in self._UPD_ERRORS:
             why = _(self._UPD_ERRORS[kind])
-            if kind == "http":
+            if kind in ("http", "git"):
                 why = why % err.detail
         else:
             why = str(err)
-        log_error("update", repr(err))
-        messagebox.showerror(_("Actualizar"), _(head) % why)
+        if rel is not None:
+            self._upd_offer_page(rel, _(head) % why)
+        else:
+            messagebox.showerror(_(self.UPD_TITLE), _(head) % why)
 
-    def _upd_thread(self, job, done, head):
+    def _upd_thread(self, job, done, head, rel=None):
         """job() en un hilo; done(resultado) o el error, de vuelta en el hilo de la ventana."""
         def work():
             try:
@@ -1180,24 +1198,43 @@ class App:
             except Exception as e:
                 if not isinstance(e, tta_update.UpdateError):
                     log_error("update", traceback.format_exc())
-                self.ui_queue.put(lambda e=e: self._upd_error(head, e))
+                self.ui_queue.put(lambda e=e: self._upd_error(head, e, rel))
             else:
                 self.ui_queue.put(lambda: done(res))
         threading.Thread(target=work, daemon=True).start()
 
     def check_update(self):
         self._upd_busy(_("Buscando…"))
-        self._upd_thread(lambda: tta_update.latest_release(__version__),
+        # la consulta y las órdenes de git (cómo se puede actualizar) van fuera del hilo de la ventana
+        self._upd_thread(lambda: (tta_update.latest_release(__version__), tta_update.install_plan(APP_DIR)),
                          self._upd_found, "No he podido buscar la versión nueva:\n%s")
 
-    def _upd_found(self, rel):
+    def _upd_found(self, found):
+        rel, (method, why) = found
         self._upd_idle()
         if not tta_update.is_newer(rel.version, __version__):
-            messagebox.showinfo(_("Actualizar"), _("Tienes la última versión (%s).") % __version__)
+            messagebox.showinfo(_(self.UPD_TITLE), _("Tienes la última versión (%s).") % __version__)
             return
-        why = tta_update.cannot_install_here(APP_DIR)
-        parts = [_("Hay una versión nueva: %s (tienes la %s).") % (rel.version, __version__)]
-        if why is None:
+        news = _("Hay una versión nueva: %s (tienes la %s).") % (rel.version, __version__)
+        if method == "git":
+            if why:
+                self._upd_offer_page(rel, news + "\n\n" + _("No la actualizo sola porque %s.") % _(self._UPD_WHY[why]))
+                return
+            if not messagebox.askyesno(_(self.UPD_TITLE), news + "\n\n" + _(
+                    "¿Actualizo esta copia? Es un clon de git: traigo la etiqueta %s del repositorio "
+                    "oficial y la avanzo hasta ella. Tus tareas no se tocan.") % rel.tag):
+                return
+            self._upd_busy(_("Descargando…"))
+
+            def git_done(_commit):
+                self._upd_idle()
+                messagebox.showinfo(_(self.UPD_TITLE), _(
+                    "Versión %s instalada. Cierra la app y vuelve a abrirla para usarla.") % rel.version)
+            self._upd_thread(lambda: tta_update.git_update(rel.tag, APP_DIR), git_done,
+                             "No he podido actualizar:\n%s", rel)
+            return
+        parts = [news]
+        if method == "zip":
             parts.append(_("¿La descargo y la instalo? Tus tareas no se tocan y guardo una copia "
                            "de la versión actual."))
         else:
@@ -1206,10 +1243,10 @@ class App:
         if not rel.sha256:
             parts.append(_("Esta versión no publica su suma SHA-256: solo puedo comprobar que "
                            "el fichero viene de GitHub."))
-        if not messagebox.askyesno(_("Actualizar"), "\n\n".join(parts)):
+        if not messagebox.askyesno(_(self.UPD_TITLE), "\n\n".join(parts)):
             return
         self._upd_busy(_("Descargando…"))
-        if why is None:
+        if method == "zip":
             def job():
                 tmp = tempfile.mkdtemp(prefix="tta-update-")
                 try:
@@ -1220,7 +1257,7 @@ class App:
 
             def done(backup):
                 self._upd_idle()
-                messagebox.showinfo(_("Actualizar"), _(
+                messagebox.showinfo(_(self.UPD_TITLE), _(
                     "Versión %s instalada. Cierra la app y vuelve a abrirla para usarla.\n\n"
                     "Copia de la anterior en:\n%s") % (rel.version, backup))
         else:
@@ -1230,7 +1267,7 @@ class App:
             def done(path):
                 self._upd_idle()
                 webbrowser.open(rel.page)
-                messagebox.showinfo(_("Actualizar"), _("Versión %s guardada en:\n%s") % (rel.version, path))
+                messagebox.showinfo(_(self.UPD_TITLE), _("Versión %s guardada en:\n%s") % (rel.version, path))
         self._upd_thread(job, done, "No he podido actualizar:\n%s")
 
     # ---- disparo --------------------------------------------------

@@ -3,12 +3,15 @@
 ## Unreleased
 
 ### Added
-- **Update button** (top right): asks GitHub for the latest release, only when pressed, and compares
-  the versions semantically. If there is a new one, it asks first, downloads that release's archive,
-  checks its SHA-256 checksum when the release publishes one and installs it over the app, keeping a
-  copy of the previous files in `.tta-backup-<version>-<date>`. `alarms.json`, `error.log` and the
-  sound are never overwritten. In a git clone, or in a folder that cannot be written to, it saves the
-  zip in Downloads and opens the release page instead. It is the app's only internet connection.
+- **Check for updates** button (top right): asks GitHub for the latest release, only when pressed,
+  and compares the versions semantically. If there is a new one, it asks first. A clean git clone
+  without commits of its own fetches the release tag from the official repository and moves forward
+  to it, fast-forward only; with local changes, commits of its own or no git, nothing is touched and
+  the release page is offered. Other copies download that release's zip, check its SHA-256 checksum
+  when the release publishes one and install it over the app, keeping a copy of the previous files
+  in `.tta-backup-<version>-<date>`; in a folder that cannot be written to, the zip is saved in
+  Downloads and the release page opens. `alarms.json`, `error.log` and the sound are never
+  overwritten. It is the app's only internet connection.
 - The version number next to the title.
 
 ## 1.0.0 — 2026-11-02
