@@ -97,6 +97,23 @@ Shortcuts: `Ctrl+S` save · `Ctrl+T` test · `Esc` clear · `Del` delete.
   and is not touched until you save a task. Any failure goes to `error.log` (with
   `pythonw` there is no console).
 
+### Updating
+
+The **Update** button (top right) asks GitHub for the latest published version. It is the app's
+**only internet connection**, and it is made only when you press it: nothing is checked at start-up
+or in the background. It sends one HTTPS request to `api.github.com` with a generic User-Agent
+(`TaskTriggerAntitrack-updater/<version>`) and no personal data, and it only accepts answers and
+redirects from GitHub's domains.
+
+- If there is a new version, it asks before downloading anything. It downloads that version's
+  archive and checks its SHA-256 checksum when the release publishes one; if it does not, it says so.
+- If the app's folder can be written to, it replaces the files and keeps the previous ones in
+  `.tta-backup-<version>-<date>`. It never touches `alarms.json`, `error.log` or your
+  `alarm_sound.wav`. Then close the app and open it again.
+- If the folder is a git repository (a `git clone`) or cannot be written to, nothing is installed
+  automatically: the zip is saved in Downloads and the release page opens. In a clone, update with
+  `git pull`.
+
 ## Languages
 
 The interface is in English, Spanish, Portuguese, French, German, Italian, Dutch, Polish, Russian,
@@ -115,7 +132,8 @@ in `tta_lang.py`.
 ## Storage
 
 Tasks are saved in `alarms.json` next to the script. It is not versioned (it holds your
-personal setup), and neither is `error.log`.
+personal setup), and neither are `error.log` and the copies left by the **Update** button
+(`.tta-backup-*`).
 
 ## Security
 

@@ -96,6 +96,22 @@ Atajos: `Ctrl+S` guardar · `Ctrl+T` probar · `Esc` limpiar · `Supr` eliminar.
   se toca hasta que guardes una tarea. Cualquier fallo queda en `error.log` (con `pythonw`
   no hay consola).
 
+### Actualizar
+
+El botón **Actualizar** (arriba a la derecha) consulta en GitHub la última versión publicada. Es la
+**única conexión a internet** de la app y solo se hace cuando lo pulsas: no comprueba nada al
+arrancar ni en segundo plano. Envía una petición HTTPS a `api.github.com` con un *User-Agent*
+genérico (`TaskTriggerAntitrack-updater/<versión>`), sin datos tuyos, y solo acepta respuestas y
+redirecciones de los dominios de GitHub.
+
+- Si hay versión nueva, te pregunta antes de descargar nada. Descarga el archivo de esa versión y
+  comprueba su suma SHA-256 cuando la versión la publica; si no la publica, te lo dice.
+- Si la carpeta de la app se puede escribir, sustituye los ficheros y guarda los anteriores en
+  `.tta-backup-<versión>-<fecha>`. Nunca toca `alarms.json`, `error.log` ni tu `alarm_sound.wav`.
+  Después hay que cerrar la app y volver a abrirla.
+- Si la carpeta es un repositorio git (un `git clone`) o no se puede escribir, no se instala sola:
+  guarda el zip en Descargas y abre la página de la versión. En un clon, actualiza con `git pull`.
+
 ## Idiomas
 
 La interfaz está en castellano, inglés, portugués, francés, alemán, italiano, neerlandés, polaco,
@@ -114,7 +130,8 @@ textos están en `tta_lang.py`.
 ## Persistencia
 
 Las tareas se guardan en `alarms.json` junto al script. No se versiona (contiene tu
-configuración personal), igual que `error.log`.
+configuración personal), igual que `error.log` y las copias que deja el botón **Actualizar**
+(`.tta-backup-*`).
 
 ## Seguridad
 
