@@ -20,7 +20,7 @@ Sin dependencias pip: solo stdlib (tkinter, ctypes en Windows; xdotool en Linux
 para teclear en ventanas; aplay/paplay para sonido).
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 import os
 import sys

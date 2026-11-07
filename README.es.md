@@ -13,6 +13,9 @@ a una hora dispara una acción. Fusiona dos herramientas:
   terminales abiertas cuyo título case un filtro (reanudar
   [Claude Code](https://claude.com/claude-code) cuando se restablece el límite de uso).
 
+El botón **Buscar actualizaciones** trae de GitHub las versiones nuevas. Es la **única conexión de
+red** de la app y solo se hace cuando lo pulsas ([detalles](#buscar-actualizaciones)).
+
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6) ![Linux](https://img.shields.io/badge/Linux-X11-FCC624) ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Qué hace cada tarea

@@ -13,6 +13,9 @@ at a given time. It merges two tools:
   terminal whose title matches a filter (to resume
   [Claude Code](https://claude.com/claude-code) when the usage limit resets).
 
+The **Check for updates** button fetches new versions from GitHub. It is the app's **only network
+connection**, and it is made only when you press it ([details](#checking-for-updates)).
+
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6) ![Linux](https://img.shields.io/badge/Linux-X11-FCC624) ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## What each task does

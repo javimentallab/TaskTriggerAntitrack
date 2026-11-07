@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-11-07
 
 ### Added
 - **Check for updates** button (top right): asks GitHub for the latest release, only when pressed,
@@ -13,6 +13,13 @@
   Downloads and the release page opens. `alarms.json`, `error.log` and the sound are never
   overwritten. It is the app's only internet connection.
 - The version number next to the title.
+- Interface texts for the button in all 15 languages, and tests of the update check, the download, the
+  installation and the git update, with the network simulated and local git repositories.
+
+### Security
+- No vulnerabilities fixed in this version: none were known in 1.0.0. The update check only uses HTTPS
+  to GitHub's own hosts (redirects included), sends a generic User-Agent and no personal data, and
+  refuses archives with paths outside the app's folder.
 
 ## 1.0.0 — 2026-11-02
 
